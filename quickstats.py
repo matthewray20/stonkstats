@@ -93,7 +93,7 @@ class Ticker:
 class Dashboard:
     def __init__(self):
         self.tickers = {}
-        self.apikey = open('apikey.txt', 'r').read().strip()
+        self.apikey = open('API_key.txt', 'r').read().strip()
     
     def from_df(self, df):
         pass
@@ -102,8 +102,14 @@ class Dashboard:
         self.tickers[tick.ticker] = tick
     
     def update_recent_price(self):
+        td = TDClient(apikey=self.apikey)
         for ticker in self.tickers:
-
+            p = td.price(symbol=ticker).as_json()
+            self.tickers[ticker].current_price = float(p['price'])
+    
+    def historical(self, start, stop, num_points):
+        pass
+            
     
     def __repr__(self):
         return f'Dashboard(): {len(self.tickers)} tickers'
@@ -115,7 +121,7 @@ class Dashboard:
         ====================="""
     
     def stats(self):
-        pass # print out relevant info
+        pass
     
     def render(self):
         pass
