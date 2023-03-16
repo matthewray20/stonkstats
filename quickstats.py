@@ -45,47 +45,56 @@ class Trade:
 class Ticker:
     def __init__(self, ticker):
         self.ticker = ticker
-        self.event_log = None
+        self.trade_log = None
         self.current_price = None
 
-    def add_event(self, event):
-        if self.event_log is None:
-            assert not isinstance(event, Split), f"First event for ticker={self.ticker} can NOT be type=Split"
-            self.event_log = [event]
+    def add_trade(self, trade):
+        if self.trade_log is None:
+            assert not isinstance(trade, Split), f"First trade for ticker={self.ticker} can NOT be type=Split"
+            self.trade_log = [trade]
         else:
-            # Insert events in date order
+            # Insert trades in date order
             # Splits will always be put last -> their date is after market close so after trades that day
-            for i, logged_event in enumerte(self.event_log):
-                if (new_event.date < logged_event.date) or (new_event.date == logged_event.date and isinstance(logged_event, Split) and isinstance(new_event, Trade)):
-                    self.event_log.insert(i, new_event)
+            for i, logged_trade in enumerte(self.trade_log):
+                if (new_trade.date < logged_trade.date) or (new_trade.date == logged_trade.date and isinstance(logged_trade, Split) and isinstance(new_trade, Trade)):
+                    self.trade_log.insert(i, new_trade)
                     return
-            self.event_log.append(new_event)
+            self.trade_log.append(new_trade)
 
     
     def quantity_held(self):
         total = 0
-        for trade in self.event_log:
-            if isinstance(trade, Buy):
-                total += trade.quantity
-            elif isinstance(trade, Sell):
-                total -= trade.quantity
-            elif isinstance(trade, Split):
-                total *= trade.ratio
+        for trade in self.trade_log:
+            if not isinstance(trade, Split) and trade.trade_type == "Buy": total += trade.quantity
             else:
                 raise TypeError(f"Unrecognised trade of type {type(trade)} from {trade}")
+        return total
         
     def ammount_invested(self):
         total = 0
-        
+        for trade in self.trade_log:
+            if not isinstance(trade, Split) and trade.trade_type == "Buy": total += (trade.quantity * trade.price)
+        return total
 
+    def total_value(self):
+        total = 0
+        for trade in self.trade_log:
+            if not isinstance(trade, Split) and trade.trade_type == "Buy": total += (trade.quantity * self.current_price)
+        return total
+
+    def profit(self):
+        return self.total_value() - self.ammount_invested()
+    
+    def avg_price_per_share(self):
+        return self.ammount_invested() / self.quantity_held()
     
     def __repr__(self):
-        return f'Ticker({self.ticker}): {len(self.event_log)} events, {self.quantity_held()} current shares'
+        return f'Ticker({self.ticker}): {len(self.trade_log)} trades, {self.quantity_held()} current shares'
     
     def __str__(self):
         return f"""
         ===== {self.ticker} =====
-        {event for event in self.event_log}
+        {trade for trade in self.trade_log}
         ================"""
 
 
@@ -93,7 +102,7 @@ class Ticker:
 class Dashboard:
     def __init__(self):
         self.tickers = {}
-        self.apikey = open('API_key.txt', 'r').read().strip()
+        td = TDClient(apikey=open('API_key.txt', 'r').read().strip())
     
     def from_df(self, df):
         pass
@@ -102,9 +111,8 @@ class Dashboard:
         self.tickers[tick.ticker] = tick
     
     def update_recent_price(self):
-        td = TDClient(apikey=self.apikey)
         for ticker in self.tickers:
-            p = td.price(symbol=ticker).as_json()
+            p = self.td.price(symbol=ticker).as_json()
             self.tickers[ticker].current_price = float(p['price'])
     
     def historical(self, start, stop, num_points):
@@ -120,13 +128,29 @@ class Dashboard:
         {self.tickers[ticker] for ticker in self.tickers.keys()}
         ====================="""
     
-    def stats(self):
-        pass
+    def stats(self, currency='USD'):
+        rates = {}
+        if currency != "USD":
+            rate = self.td.exchange_rate(symbol=f"{currency}/USD").as_json()['rate']
+
+        print('======= Quickstats =======')
+        print('Stock | Net Worth | Profit')
+        print('--------------------------')
+        for ticker in self.tickers:
+            print(f'{ticker:6}{ticker.total_value():12.2f}{ticker.profit():6.2f}')
+            print(print('--------------------------'))
     
     def render(self):
         pass
         # TODO: GUI
         # call it show()? 
+
+
+if __name__ == "__main__":
+    db = Dashboard()
+    df = pd.read_csv('sharedata.csv')
+    db.from_df(df)
+    print(db)
 
 
 
