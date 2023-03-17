@@ -1,0 +1,15 @@
+---
+data: sharedata.csv
+apiKey: API_key.txt
+price: share_price
+ticker: ticker
+quantity: quantity
+type: Type
+date: Date
+currency: Currency
+eventType:
+  buy: BUY
+  sell: SELL
+  split: Split
+defaultCurrency: AUD
+dateFormat: '%d/%m/%y'

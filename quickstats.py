@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import pandas as pd
+import yaml
 from twelvedata import TDClient
 from matplotlib import pyplot as plt
 from datetime import datetime
@@ -66,17 +67,18 @@ class Ticker:
     def quantity_held(self):
         total = 0
         for event in self.event_log:
-            if not isinstance(event, Split) and event.trade_type == "BUY": 
+            if not isinstance(event, Split) and event.trade_type == BUY_DELIM: 
                 total += event.quantity
             elif isinstance(event, Split): total *= event.ratio
             else:
-                raise TypeError(f"Unrecognised trade of type {type(event)} from {event}")
+                raise TypeError(f"Unrecognised trade of type {type(event)} from {event.__repr__()}")
         return total
         
     def ammount_invested(self):
+        # TODO: account for selling
         total = 0
         for trade in self.event_log:
-            if not isinstance(trade, Split) and trade.trade_type == "BUY": total += (trade.quantity * trade.price)
+            if not isinstance(trade, Split) and trade.trade_type == BUY_DELIM: total += (trade.quantity * trade.price)
         return total
 
     def total_value(self):
@@ -103,45 +105,41 @@ class Ticker:
 
 
 class Dashboard:
-    def __init__(self):
+    def __init__(self, default_currency='AUD'):
         self.tickers = {}
-        self.td = TDClient(apikey=open('API_key.txt', 'r').read().strip())
-        self.default_currency = 'AUD'
+        self.td = TDClient(apikey=open(API_KEY_FILE, 'r').read().strip())
+        self.default_currency = default_currency
     
     def from_df(self, df):
         exchange_rate_cache = {self.default_currency: 1, 'USD':0.6}
         for i in range(len(df)):
             event = df.loc[i]
-            event_date = datetime.strptime(event['Date'], '%d/%m/%y')
-            event_quantity = float(event['quantity'])
+            event_date = datetime.strptime(DATE_DELIM, DATE_FORMAT)
+            event_quantity = float(event[QUANTITY_DELIM])
                 
-            if event['Currency'] not in exchange_rate_cache:
-                print(f'retrieving: {self.default_currency}/{event["Currency"]}')
-                exchange_rate_cache[event['Currency']] = self.td.exchange_rate(symbol=f'{self.default_currency}/{event["Currency"]}').as_json()['rate']
-            event_price = float(event['share_price']) * exchange_rate_cache[event['Currency']]
+            if event[CURRENCY_DELIM] not in exchange_rate_cache:
+                print(f'retrieving: {self.default_currency}/{event[CURRENCY_DELIM]}')
+                exchange_rate_cache[event[CURRENCY_DELIM]] = self.td.exchange_rate(symbol=f'{self.default_currency}/{event[CURRENCY_DELIM]}').as_json()['rate']
+            event_price = float(event[PRICE_DELIM]) * exchange_rate_cache[event[CURRENCY_DELIM]]
 
-            if event['ticker'] not in self.tickers:
-                print('creating ticker:', event['ticker'])
-                self.add_ticker(Ticker(event['ticker']))
+            if event[TICKER_DELIM] not in self.tickers:
+                self.add_ticker(Ticker(event[TICKER_DELIM]))
 
-            if event['Type'] == 'BUY' or event['Type'] == 'SELL':
-                print('creating trade')
+            if event[TYPE_DELIM] == BUY_DELIM or event[TYPE_DELIM] == SELL_DELIM:
                 new_trade = Trade(
                     quantity=event_quantity,
                     price=event_price, 
-                    trade_type=event['Type'], 
+                    trade_type=event[TYPE_DELIM], 
                     date=event_date, 
                     currency=self.default_currency)
-                print('adding trade')
-                self.tickers[event['ticker']].add_event(new_trade)
-            elif event['Type'] == 'SPLIT':
-                print('creating and adding split')
-                self.tickers[event['ticker']].add_event(
+                self.tickers[event[TICKER_DELIM]].add_event(new_trade)
+            elif event[TYPE_DELIM] == SPLIT_DELIM:
+                self.tickers[event[TICKER_DELIM]].add_event(
                     Split(
                         ratio=event_quantity,
                         date=event_date))
             else:
-                ValueError("not sure how we're getting here ? #####")
+                ValueError(f'Incorrect event type {type(event[TYPE_DELIM])}. SHould be one of {BUY_DELIM}, {SELL_DELIM}, {SPLIT_DELIM}')
 
     
     def add_ticker(self, tick):
@@ -195,13 +193,29 @@ class Dashboard:
     
     
 
-
 if __name__ == "__main__":
+    with open('config.yaml') as f:
+        config = yaml.load(f, Loader=yaml.FullLoader)
+        
+    FILEPATH = config['data']
+    API_KEY_FILE = config['apiKey']
+    TICKER_DELIM = config['ticker']
+    PRICE_DELIM = config['price']
+    QUANTITY_DELIM = config['quantity']
+    DATE_DELIM = config['date']
+    TYPE_DELIM = config['type']
+    CURRENCY_DELIM = config['currency']
+    BUY_DELIM = config['eventType']['buy']
+    SELL_DELIM = config['eventType']['sell']
+    SPLIT_DELIM = config['eventType']['split']
+    DEFAULT_CURRENCY = config['defaultCurrency']
+    DATE_FORMAT = config['dateFormat']
+    
     db = Dashboard()
-    df = pd.read_csv('sharedata.csv')
+    df = pd.read_csv(FILEPATH)
     db.from_df(df)
     #db.get_latest_price()
-    print(db.stats())
+    db.stats()
 
 
 
