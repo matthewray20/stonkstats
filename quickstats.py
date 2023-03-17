@@ -114,7 +114,7 @@ class Dashboard:
         exchange_rate_cache = {self.default_currency: 1, 'USD':0.6}
         for i in range(len(df)):
             event = df.loc[i]
-            event_date = datetime.strptime(DATE_DELIM, DATE_FORMAT)
+            event_date = datetime.strptime(event[DATE_DELIM], DATE_FORMAT)
             event_quantity = float(event[QUANTITY_DELIM])
                 
             if event[CURRENCY_DELIM] not in exchange_rate_cache:
