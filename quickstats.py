@@ -48,7 +48,7 @@ class Ticker:
     def __init__(self, ticker):
         self.ticker = ticker
         self.event_log = None
-        self.current_price = 1
+        self.current_price = 250
 
     def add_event(self, new_event):
         if self.event_log is None:
@@ -167,15 +167,29 @@ class Dashboard:
         if currency is not None and currency is not self.default_currency:
             rate = self.td.exchange_rate(symbol=f"{self.default_currency}/{currency}").as_json()['rate']
 
-        cols = ['Ticker', 'NetVal', 'Profit', 'x Mult']
-        divider = '-' * 40
+        cols = ['Ticker', 'Quantity', 'Value', 'Profit', 'x Mult']
+        col_width = 14
+        title = 'Quickstats'
+        title_padding = (col_width * len(cols) + len(cols) - 1)//2 - (len(title) + 2 )//2
+        divider = '-' * ((col_width + 1) * len(cols) - 1) + '\n'
+        display_string = ''
+        
+        display_string += f"{'-' * title_padding} {title} {'-' * (title_padding + (0 if col_width%2==0 else 1))}\n"
+        display_string += f"|".join([f'{col:^{col_width}}' for col in cols]) + '\n'
+        display_string += divider
 
-        print(f"{'-'*14} Quickstats {'-'*14}")
-        print(f"|".join([f'{col:^10}' for col in cols]))
-        print(divider)
-        for ticker in self.tickers:
-            print(f'{ticker:10} {self.tickers[ticker].total_value()*rate:10f} {self.tickers[ticker].profit()*rate:10.2f}')
-            print(divider)
+        for ticker in self.tickers:#["TSLA"]:
+            net_value = self.tickers[ticker].total_value()*rate
+            net_profit = self.tickers[ticker].profit()*rate
+            returns_mult = net_value / self.tickers[ticker].ammount_invested()
+
+            display_string += f'{ticker:{col_width}}|'
+            display_string += f'{net_value:{col_width}.2f}|'
+            display_string += f'{net_profit:{col_width}.2f}|'
+            display_string += f'{returns_mult:{col_width}.2f}\n'
+            display_string += divider
+        
+        print(display_string)
     
     def render(self):
         pass
@@ -211,7 +225,7 @@ if __name__ == "__main__":
     DEFAULT_CURRENCY = config['defaultCurrency']
     DATE_FORMAT = config['dateFormat']
     
-    db = Dashboard()
+    db = Dashboard(DEFAULT_CURRENCY)
     df = pd.read_csv(FILEPATH)
     db.from_df(df)
     #db.get_latest_price()
