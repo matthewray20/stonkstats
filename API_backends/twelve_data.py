@@ -21,7 +21,7 @@ class MyTwelveDataAPI(DefaultAPI):
         except Exception as e:
             print(f'###### ERROR getting latest price for {asset.ticker} (type {asset.asset_type})')
             print(e)
-            return 0
+            return 1
 
     def get_exchange_rate(self, convert_from, convert_to):
         try:
@@ -34,7 +34,7 @@ class MyTwelveDataAPI(DefaultAPI):
         except Exception as e:
             print(f'###### ERROR getting exchange rate from {convert_from} to {convert_to}')
             print(e)
-            return 0
+            return 1
 
 
     def get_historical_prices(self, start_date, end_date, desired_currency, interval='1d', *args):
@@ -48,7 +48,7 @@ class MyTwelveDataAPI(DefaultAPI):
         except Exception as e:
             print(f'###### ERROR getting historical prices for {len(assets)} assets(s)')
             print(e)
-            return 0
+            return 1
     
 
         
