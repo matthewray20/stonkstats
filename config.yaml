@@ -19,7 +19,7 @@ api:
   apiBackend: twelveData
 dataConversions:
   dateFormat: '%d/%m/%Y'
-  defaultCurrency: USD
+  defaultCurrency: AUD
 display:
   colWidth: 12
 

@@ -138,19 +138,31 @@ class Portfolio:
         display_string += f"|".join([f'{col:^{col_width}}' for col in cols]) + '\n'
         display_string += divider
 
+        total_invested, total_net_value = 0, 0
+
         # calculating stats
         for ticker in self.assets:
             asset = self.assets[ticker]
             # calculate stats
             num_shares = asset.quantity_held()
             invested = asset.ammount_invested() * rate
+            total_invested += invested
             avg_price = invested / num_shares
             net_value = num_shares * asset.current_price
+            total_net_value += net_value
             net_profit = net_value - invested
+            xmult = net_profit / invested
 
             # printing row in table
-            display_string += f'{ticker:{col_width}}|{num_shares:{col_width}.2f}|{avg_price:{col_width}.2f}|{invested:{col_width}.2f}|{net_value:{col_width}.2f}|{net_profit:{col_width}.2f}|{net_profit / invested:{col_width}.2f}\n'
+            display_string += f'{ticker:{col_width}}|{num_shares:{col_width}.2f}|{avg_price:{col_width}.2f}|{invested:{col_width}.2f}|{net_value:{col_width}.2f}|{net_profit:{col_width}.2f}|{xmult:{col_width}.2f}\n'
             display_string += divider
+        
+        # add total row
+        total_net_profit = total_net_value - total_invested
+        total_xmult = total_net_profit / total_invested
+        display_string += f'{"Total":>{col_width}}|{"n/a":>{col_width}}|{"n/a":>{col_width}}|{total_invested:{col_width}.2f}|{total_net_value:{col_width}.2f}|{total_net_profit:{col_width}.2f}|{total_xmult:{col_width}.2f}\n'
+        display_string += divider
+        
 
         display_string += f'({currency})'
         print(display_string)
