@@ -1,20 +1,25 @@
 ---
-dataPath: sharedata.csv
+data:
+  filepath: data/sharedata.csv
+  headers:
+    - assetType
+    - price
+    - ticker
+    - quantity
+    - eventType
+    - date
+    - currency
+    - commision
+  events: 
+    - buy
+    - sell
+    - split
 api:
   apiKeysFile: API_backends/API_keys.yaml
   apiBackend: twelveData
-delims: 
-  assetType: Asset_Type
-  price: Share_Price
-  ticker: Ticker
-  quantity: Quantity
-  eventType: Type
-  date: Date
-  currency: Currency
-  buy: BUY
-  sell: SELL
-  split: SPLIT
 dataConversions:
   dateFormat: '%d/%m/%Y'
-defaultCurrency: AUD
+  defaultCurrency: AUD
+display:
+  colWidth: 12
 

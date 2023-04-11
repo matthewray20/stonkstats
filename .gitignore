@@ -1,2 +1,3 @@
 /data/sharedata.csv
 /API_backends/API_keys.yaml
+**/__pycache__

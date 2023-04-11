@@ -2,7 +2,6 @@
 
 import pandas as pd
 import yaml
-from twelvedata import TDClient
 from matplotlib import pyplot as plt
 from datetime import datetime
 from API_backends.twelve_data import MyTwelveDataAPI
@@ -34,14 +33,13 @@ class Asset:
         self.ticker = ticker
         self.asset_type = asset_type
         self.event_log = None
-        self.current_price = 250 #### to be removed
+        self.current_price = None
 
     def add_event(self, new_event):
         if self.event_log is None:
             assert not isinstance(new_event, Split), f"First trade for ticker={self.ticker} can not be type=Split"
             self.event_log = [new_event]
         else:
-            # Insert trades in date order
             # Splits will always be put last -> their date is after market close so after trades that day
             for i, logged_event in enumerate(self.event_log):
                 if (new_event.date < logged_event.date) or (new_event.date == logged_event.date and isinstance(logged_event, Split) and isinstance(new_event, Trade)):
@@ -52,7 +50,7 @@ class Asset:
     def quantity_held(self):
         total = 0
         for event in self.event_log:
-            if isinstance(event, Trade) and event.trade_type == BUY_DELIM: total += event.quantity
+            if isinstance(event, Trade) and event.trade_type == 'buy': total += event.quantity
             elif isinstance(event, Split): total *= event.ratio
             else: raise TypeError(f"Unrecognised trade of type {type(event)} from {event.__repr__()}")
         return total
@@ -61,7 +59,7 @@ class Asset:
         # TODO: account for selling
         total = 0
         for trade in self.event_log:
-            if isinstance(trade, Trade) and trade.trade_type == BUY_DELIM: total += (trade.quantity * trade.price)
+            if isinstance(trade, Trade) and trade.trade_type == 'buy': total += (trade.quantity * trade.price)
         return total
     
     def __repr__(self):
@@ -73,47 +71,41 @@ class Portfolio:
         self.assets = {}
         self.default_currency = default_currency
         self.api = api
-        self.exchange_rate_cache = {self.default_currency: 1, 'USD':0.6}
+        #self.exchange_rate_cache = {self.default_currency: 1, 'USD':0.6}
 
     def add_asset(self, new_asset):
         self.assets[new_asset.ticker] = new_asset
     
-    def get_latest_prices(self):
+    def get_latest_prices(self, desired_currency=None):
         for ticker in self.assets:
             print(f'getting latest price for |{ticker}|')
-            self.assets[ticker].current_price = self.api.get_latest_price(ticker, sellf.assets[ticker].asset_type)
+            self.assets[ticker].current_price = self.api.get_latest_price(self.assets[ticker], desired_currency)# if desired_currency is not None else self.default_currency)
     
     def plot_historical(self, start, stop, interval):
-        data = self.api.get_historical_prices(start, stop, interval, )
+        #data = self.api.get_historical_prices(start, stop, interval, )
         pass
 
-    def from_df(self, df):
-        # Asset_Type,Ticker,Quantity,Share_Price,Date,Type,Currency,Commission
-        # go through each event
-        for i in range(len(df)):
+    def from_csv(self, filename):
+        df = pd.read_csv(filename)
+        # ensure data in in the type we expect
+        assert set(df.columns) == set(CONFIG["data"]["headers"]), f'{CONFIG["data"]["filepath"]} headers {df.columns} expected to be {[header for header in CONFIG["data"]["headers"]]}'
+        assert set(df['eventType']).issubset(set(CONFIG['data']['events'])), 'Error: unexpected eventType in data'
+        
+        for _, event in df.iterrows():
             # get data of event
-            event = df.loc[i]
-            ticker = event[TICKER_DELIM]
-            asset_type = event[ASSET_TYPE_DELIM]
-            date = datetime.strptime(event[DATE_DELIM], DATE_FORMAT)
-            quantity = float(event[QUANTITY_DELIM])
-            currency = event[CURRENCY_DELIM]
-            event_type = event[EVENT_TYPE_DELIM]
-            
-            # get price in proper default currency
-            if currency not in self.exchange_rate_cache:
-                print(f'retrieving: {self.default_currency}/{currency}')
-                self.exchange_rate_cache[currency] = self.api.get_exchange_rate(convert_from=currency, convert_to=self.default_currency)
-            price = float(event[PRICE_DELIM]) * self.exchange_rate_cache[currency]
+            ticker = event['ticker']
+            date = datetime.strptime(event['date'], CONFIG['dataConversions']['dateFormat'])
+            quantity = float(event['quantity'])
+            currency = event['currency']
+            event_type = event['eventType']
+            price = float(event['price']) * 1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency)
 
             # add new asset if needed
             if ticker not in self.assets:
-                self.add_asset(Asset(ticker, asset_type))
+                self.add_asset(Asset(ticker, event['assetType']))
 
             # if event is buy or sell
-            print('#########')
-            print(event_type)
-            if event_type == BUY_DELIM or event_type == SELL_DELIM:
+            if event_type == 'buy' or event_type == 'sell':
                 self.assets[ticker].add_event(
                     Trade(
                         quantity=quantity,
@@ -122,38 +114,36 @@ class Portfolio:
                         date=date, 
                         currency=self.default_currency))
             # if event is split
-            elif event_type == SPLIT_DELIM:
+            elif event_type == 'split':
                 self.assets[ticker].add_event(
                     Split(
                         ratio=quantity,
                         date=date))
-            else:
-                ValueError(f'Incorrect event type {type(event[TYPE_DELIM])}. SHould be one of {BUY_DELIM}, {SELL_DELIM}, {SPLIT_DELIM}')
-    
+            #else:
+                #ValueError(f'Incorrect event type {type(event['eventType'])}. SHould be one of {'buy'}, {'sell'}, {'split'}')
+
     def quickstats(self, currency=None):
+        if currency is None: currency = self.default_currency
         # get latest prices for each asset
-        self.get_latest_prices()
-        rate = 1
+        self.get_latest_prices(currency)
         # convert to default currency
-        if currency is not None and currency is not self.default_currency:
-            rate = self.api.get_exchange_rate(convert_from=self.default_currency, convert_to=currency)
+        rate = 1 if currency == self.default_currency else self.api.get_exchange_rate(convert_from=self.default_currency, convert_to=currency)
 
         # parameterised strings for printing as a table
-        cols = ['Ticker', 'Quantity', 'Avg Price', 'Cur Value', 'Profit', 'x Mult']
-        col_width = 12
+        col_width = CONFIG['display']['colWidth']
+        cols = ['Ticker', 'Quantity', 'Avg Price', 'Invested', 'Cur Value', 'Profit', 'x Mult']
         title = 'Quickstats'
         title_padding = (col_width * len(cols) + len(cols) - 1)//2 - (len(title) + 2 )//2
         divider = '-' * ((col_width + 1) * len(cols) - 1) + '\n'
-        display_string = ''
         
-        display_string += f"{'-' * title_padding} {title} {'-' * (title_padding + 1)}\n"
+        display_string = f"{'-' * title_padding} {title} {'-' * (title_padding + 1)}\n"
         display_string += f"|".join([f'{col:^{col_width}}' for col in cols]) + '\n'
         display_string += divider
 
         # calculating stats
         for ticker in self.assets:
             asset = self.assets[ticker]
-
+            # calculate stats
             num_shares = asset.quantity_held()
             invested = asset.ammount_invested() * rate
             avg_price = invested / num_shares
@@ -161,12 +151,7 @@ class Portfolio:
             net_profit = net_value - invested
 
             # printing row in table
-            display_string += f'{ticker:{col_width}}|'
-            display_string += f'{num_shares:{col_width}.2f}|'
-            display_string += f'{avg_price:{col_width}.2f}|'
-            display_string += f'{net_value:{col_width}.2f}|'
-            display_string += f'{net_profit:{col_width}.2f}|'
-            display_string += f'{net_profit / invested:{col_width}.2f}\n'
+            display_string += f'{ticker:{col_width}}|{num_shares:{col_width}.2f}|{avg_price:{col_width}.2f}|{invested:{col_width}.2f}|{net_value:{col_width}.2f}|{net_profit:{col_width}.2f}|{net_profit / invested:{col_width}.2f}\n'
             display_string += divider
 
         display_string += f'({currency})'
@@ -178,44 +163,34 @@ class Portfolio:
             
     def __repr__(self):
         return f'Dashboard(): {len(self.assets)} assets'
+
+def main():
+    # TODO: currency is not consistent i.e. getting latest prices (which currency?)
+    global CONFIG
+    with open('config.yaml') as f:
+        CONFIG = yaml.load(f, Loader=yaml.FullLoader)
+    
+    # getting api details from config
+    api_key_file = CONFIG['api']['apiKeysFile']
+    api_backend = CONFIG['api']['apiBackend']
+
+    # get api and associted api key
+    with open(api_key_file) as f:
+        api_keys = yaml.load(f, Loader=yaml.FullLoader)
+    if api_backend == 'twelveData': api = MyTwelveDataAPI
+    elif api_backend == 'alphaVantage': api = MyAlphaVantageAPI
+    else:
+        raise ValueError(f'{API_BACKEND} not recognised as an API backend')
+    api_key = api_keys[api_backend]
+    
+    # create portfolio class instance with api backend and the defult currency
+    p = Portfolio(api(api_key), CONFIG['dataConversions']['defaultCurrency'])
+    # load data in
+    p.from_csv(CONFIG['data']['filepath'])
+    # show the stats
+    p.quickstats()
     
 
 
 if __name__ == "__main__":
-    # TODO: currency is not consistent i.e. getting latest prices (which currency?)
-    with open('config.yaml') as f:
-        config = yaml.load(f, Loader=yaml.FullLoader)
-    
-    # getting deliminators from config
-    TICKER_DELIM = config['delims']['ticker']
-    PRICE_DELIM = config['delims']['price']
-    QUANTITY_DELIM = config['delims']['quantity']
-    DATE_DELIM = config['delims']['date']
-    EVENT_TYPE_DELIM = config['delims']['eventType']
-    CURRENCY_DELIM = config['delims']['currency']
-    ASSET_TYPE_DELIM = config['delims']['assetType']
-    BUY_DELIM = config['delims']['buy']
-    SELL_DELIM = config['delims']['sell']
-    SPLIT_DELIM = config['delims']['split']
-    
-    # getting data conversions
-    DATE_FORMAT = config['dataConversions']['dateFormat']
-    
-    # getting variables from config
-    default_currency = config['defaultCurrency']
-    
-    # getting api details from config
-    api_key_file = config['api']['apiKeysFile']
-    api_backend = config['api']['apiBackend']
-
-    if api_backend == 'twelveData':
-        api = MyTwelveDataAPI
-    elif api_backend == 'alphaVantage':
-        api = MyAlphaVantageAPI
-    else:
-        raise ValueError(f'{API_BACKEND} not recognised as an API backend')
-    
-    p = Portfolio(api(api_key_file), default_currency)
-    df = pd.read_csv(config['dataPath'])
-    p.from_df(df)
-    p.quickstats()
+    main()
