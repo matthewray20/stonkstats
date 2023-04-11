@@ -59,7 +59,7 @@ class Asset:
         # TODO: account for selling
         total = 0
         for trade in self.event_log:
-            if isinstance(trade, Trade) and trade.trade_type == 'buy': total += (trade.quantity * trade.price)
+            if isinstance(trade, Trade) and trade.trade_type == 'buy': total += (trade.quantity * trade.price) # + trade.commision
         return total
     
     def __repr__(self):
@@ -78,7 +78,7 @@ class Portfolio:
     
     def get_latest_prices(self, desired_currency=None):
         for ticker in self.assets:
-            print(f'getting latest price for |{ticker}|')
+            print(f'getting latest price for <{ticker}>')
             self.assets[ticker].current_price = self.api.get_latest_price(self.assets[ticker], desired_currency)# if desired_currency is not None else self.default_currency)
     
     def plot_historical(self, start, stop, interval):
@@ -88,7 +88,7 @@ class Portfolio:
     def from_csv(self, filename):
         df = pd.read_csv(filename)
         # ensure data in in the type we expect
-        assert set(df.columns) == set(CONFIG["data"]["headers"]), f'{CONFIG["data"]["filepath"]} headers {df.columns} expected to be {[header for header in CONFIG["data"]["headers"]]}'
+        assert set(df.columns) == set(CONFIG["data"]["headers"]), f'{CONFIG["data"]["filepath"]} headers {df.columns} expected to be {CONFIG["data"]["headers"]}'
         assert set(df['eventType']).issubset(set(CONFIG['data']['events'])), 'Error: unexpected eventType in data'
         
         for _, event in df.iterrows():
@@ -98,13 +98,13 @@ class Portfolio:
             quantity = float(event['quantity'])
             currency = event['currency']
             event_type = event['eventType']
-            price = float(event['price']) * 1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency)
+            price = float(event['price']) * (1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency))
 
             # add new asset if needed
             if ticker not in self.assets:
                 self.add_asset(Asset(ticker, event['assetType']))
 
-            # if event is buy or sell
+            # add different events
             if event_type == 'buy' or event_type == 'sell':
                 self.assets[ticker].add_event(
                     Trade(
@@ -113,14 +113,13 @@ class Portfolio:
                         trade_type=event_type, 
                         date=date, 
                         currency=self.default_currency))
-            # if event is split
             elif event_type == 'split':
                 self.assets[ticker].add_event(
                     Split(
                         ratio=quantity,
                         date=date))
             #else:
-                #ValueError(f'Incorrect event type {type(event['eventType'])}. SHould be one of {'buy'}, {'sell'}, {'split'}')
+                #ValueError(f'Incorrect event type {type(event['eventType'])}. SHould be one of CONFIG["data"]["events"]')
 
     def quickstats(self, currency=None):
         if currency is None: currency = self.default_currency
@@ -128,7 +127,6 @@ class Portfolio:
         self.get_latest_prices(currency)
         # convert to default currency
         rate = 1 if currency == self.default_currency else self.api.get_exchange_rate(convert_from=self.default_currency, convert_to=currency)
-
         # parameterised strings for printing as a table
         col_width = CONFIG['display']['colWidth']
         cols = ['Ticker', 'Quantity', 'Avg Price', 'Invested', 'Cur Value', 'Profit', 'x Mult']
