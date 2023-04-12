@@ -21,7 +21,7 @@ class MyAlphaVantageAPI(DefaultAPI):
         price_resp = requests.get(self.base_url + f'function=GLOBAL_QUOTE&symbol={asset.ticker}&apikey={self.api_key}')
         currency_resp = requests.get(self.base_url + f'function=OVERVIEW&symbol={asset.ticker}&apikey={self.api_key}')
         # error check responses
-        if self.error_in_response(price_resp) or self.error_in_response(currency_resp): return 0
+        if self.check_for_error(price_resp, 'price', asset.ticker) or self.check_for_error(currency_resp, 'currency_info', asset.ticker): return 0
         # get price and currency data, 
         price = float(json.loads(price_resp.text)['Global Quote']['05. price'])
         currency = json.loads(currency_resp.text)['Currency']
@@ -37,7 +37,7 @@ class MyAlphaVantageAPI(DefaultAPI):
         if exchange_string in self.exchange_rate_cache: return self.exchange_rate_cache[exchange_string]
         # API call and error check
         resp = requests.get(self.base_url + f'function=CURRENCY_EXCHANGE_RATE&from_currency={convert_from}&to_currency={convert_to}&apikey={self.api_key}')
-        if self.error_in_response(resp): return 1
+        if self.check_for_error(resp, 'exchange_rate', convert_from, convert_to): return 1
         # get to exchange rate and return it
         data = json.loads(resp.text)
         rate = float(data['Realtime Currency Exchange Rate']['5. Exchange Rate'])
@@ -46,19 +46,20 @@ class MyAlphaVantageAPI(DefaultAPI):
     
     def get_historical_prices(self, start_date, end_date, interval='1d', *args):
         return 0
-
-    @staticmethod
-    def error_in_response(resp, info='Error'):
+    
+    def check_for_error(self, resp, action, *args):
         error = False
         if resp.status_code != requests.codes.ok:
             error = True
         data = json.loads(resp.text)
         if 'Error Message' in data.keys() or 'Note' in data.keys():
             error = True
-        if error:
-            print(info)
+        if error: 
+            self.print_error_message(action, *args)
             print(f'got status code:{resp.status_code} - \n{resp.text}')
         return error
+
+    
     
     
     
