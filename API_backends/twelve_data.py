@@ -6,31 +6,29 @@ from twelvedata import TDClient
 # TODO: move error handling to default API. Maybe use @error_capture to wrap methods
 class MyTwelveDataAPI(DefaultAPI):
     def __init__(self, api_key):
+        super().__init__()
+        self.max_requests_per_min = 8
         self.td = TDClient(apikey=api_key)
-        self.exchange_rate_cache = {}
     
     def get_latest_price(self, asset, desired_currency):
         try:
-            if asset.asset_type == 'crypto':
-                return float(self.td.price(symbol=f'{asset.ticker}/{desired_currency}').as_json()['price'])
-            elif asset.asset_type == 'security':
-                # detirmine what currency is returned in
-                currency = self.td.eod(symbol=asset.ticker).as_json()['currency']
-                rate = 1 if currency == desired_currency else self.get_exchange_rate(currency, desired_currency)
-                return float(self.td.price(symbol=asset.ticker).as_json()['price']) * rate
+            if asset.asset_type == 'crypto': return float(self.td.price(symbol=f'{asset.ticker}/{desired_currency}').as_json()['price'])
+            # detirmine what currency is returned in
+            currency = self.td.eod(symbol=asset.ticker).as_json()['currency']
+            rate = 1 if currency == desired_currency else self.get_exchange_rate(currency, desired_currency)
+            return float(self.td.price(symbol=asset.ticker).as_json()['price']) * rate
         except Exception as e:
             print(f'###### ERROR getting latest price for {asset.ticker} (type {asset.asset_type})')
             print(e)
-            return 1
+            return 0
 
     def get_exchange_rate(self, convert_from, convert_to):
         try:
             currencies = f'{convert_from}/{convert_to}'
             if currencies in self.exchange_rate_cache: return self.exchange_rate_cache[currencies]
-            else: 
-                rate = self.td.exchange_rate(symbol=currencies).as_json()['rate']
-                self.exchange_rate_cache[currencies] = rate
-                return rate
+            rate = self.td.exchange_rate(symbol=currencies).as_json()['rate']
+            self.exchange_rate_cache[currencies] = rate
+            return rate
         except Exception as e:
             print(f'###### ERROR getting exchange rate from {convert_from} to {convert_to}')
             print(e)
@@ -48,7 +46,7 @@ class MyTwelveDataAPI(DefaultAPI):
         except Exception as e:
             print(f'###### ERROR getting historical prices for {len(assets)} assets(s)')
             print(e)
-            return 1
+            return 0
     
 
         

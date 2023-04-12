@@ -76,10 +76,10 @@ class Portfolio:
     def add_asset(self, new_asset):
         self.assets[new_asset.ticker] = new_asset
     
-    def get_latest_prices(self, desired_currency=None):
+    def get_latest_prices(self, desired_currency):
         for ticker in self.assets:
             print(f'getting latest price for <{ticker}>')
-            self.assets[ticker].current_price = self.api.get_latest_price(self.assets[ticker], desired_currency)# if desired_currency is not None else self.default_currency)
+            self.assets[ticker].current_price = self.api.get_latest_price(self.assets[ticker], desired_currency)
     
     def plot_historical(self, start, stop, interval):
         #data = self.api.get_historical_prices(start, stop, interval, )
@@ -175,7 +175,7 @@ class Portfolio:
         return f'Dashboard(): {len(self.assets)} assets'
 
 def main():
-    # TODO: currency is not consistent i.e. getting latest prices (which currency?)
+    # TODO: need way to see what currency a ticker will return
     global CONFIG
     with open('config.yaml') as f:
         CONFIG = yaml.load(f, Loader=yaml.FullLoader)
