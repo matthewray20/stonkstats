@@ -7,6 +7,12 @@ from datetime import datetime
 from API_backends.twelve_data import MyTwelveDataAPI
 from API_backends.alpha_vantage import MyAlphaVantageAPI
 
+# TODO: add throttling config setting to limit api calls
+# TODO: better error handling apis
+# TODO: add cash position
+# TODO: implement deposists and selling
+
+
 class Split:
     def __init__(self, ratio, date):
         self.ratio = ratio
@@ -15,7 +21,7 @@ class Split:
     def __repr__(self):
         return f'Split(ratio={self.ratio}, date={self.date})'
 
-
+ 
 class Trade:
     def __init__(self, quantity, price, date, currency, trade_type):
         self.quantity = quantity
@@ -28,10 +34,22 @@ class Trade:
         return f'{self.trade_type}(quantity={self.quantity}, price={self.price}, date={self.date}, currency={self.currency})'
 
 
+class Cash:
+    def __init__(self, quantity, date, currency, trade_type):
+        self.quantity = quantity
+        self.date = date
+        self.currency = currency
+        self.cash_type = trade_type
+    
+    def __repr__(self):
+        return f'{self.trade_type}(quantity={self.quantity}, date={self.date}, currency={self.currency})'
+
+
 class Asset:
-    def __init__(self, ticker, asset_type):
+    def __init__(self, ticker, asset_type, asset_api_currency):
         self.ticker = ticker
         self.asset_type = asset_type
+        self.asset_api_currency = asset_api_currency
         self.event_log = None
         self.current_price = None
 
@@ -51,7 +69,10 @@ class Asset:
         total = 0
         for event in self.event_log:
             if isinstance(event, Trade) and event.trade_type == 'buy': total += event.quantity
+            elif isinstance(event, Trade) and event.trade_type == 'sell': total -= event.quantity
             elif isinstance(event, Split): total *= event.ratio
+            elif isinstance(event, Cash) and event.cash_type == 'deposit': total += event.quantity
+            elif isinstance(event, Cash) and event.cash_type == 'withdrawl': total -= event.quantity
             else: raise TypeError(f"Unrecognised trade of type {type(event)} from {event.__repr__()}")
         return total
         
@@ -71,7 +92,6 @@ class Portfolio:
         self.assets = {}
         self.default_currency = default_currency
         self.api = api
-        #self.exchange_rate_cache = {self.default_currency: 1, 'USD':0.6}
 
     def add_asset(self, new_asset):
         self.assets[new_asset.ticker] = new_asset
@@ -98,12 +118,12 @@ class Portfolio:
             quantity = float(event['quantity'])
             currency = event['currency']
             event_type = event['eventType']
-            price = float(event['price']) * (1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency))
-
+            price = float(event['price']) * self.api.which_rate(currency, default_currency) # (1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency))
+                                          # self.api.rate(currency, default_currency) -> returns 1 if equal, returns exchange rate if not
             # add new asset if needed
             if ticker not in self.assets:
-                self.add_asset(Asset(ticker, event['assetType']))
-
+                self.add_asset(Asset(ticker, event['assetType'], self.api.get_currency_info(ticker)))
+            
             # add different events
             if event_type == 'buy' or event_type == 'sell':
                 self.assets[ticker].add_event(
@@ -118,15 +138,24 @@ class Portfolio:
                     Split(
                         ratio=quantity,
                         date=date))
+            elif event_type == 'deposit' or event_type == 'withdrawl':
+                self.assets['ticker'].add_event(
+                    Cash(
+                        quantity=quantity,
+                        date=date,
+                        currency=currency,
+                        cash_type=event_type))
             #else:
                 #ValueError(f'Incorrect event type {type(event['eventType'])}. SHould be one of CONFIG["data"]["events"]')
 
     def quickstats(self, currency=None):
+        # def show(headers, data):
         if currency is None: currency = self.default_currency
         # get latest prices for each asset
         self.get_latest_prices(currency)
         # convert to default currency
-        rate = 1 if currency == self.default_currency else self.api.get_exchange_rate(convert_from=self.default_currency, convert_to=currency)
+        #rate = 1 if currency == self.default_currency else self.api.get_exchange_rate(convert_from=self.default_currency, convert_to=currency)
+        rate = self.api.which_rate(currency, self.default_currency)
         # parameterised strings for printing as a table
         col_width = CONFIG['display']['colWidth']
         cols = ['Ticker', 'Quantity', 'Avg Price', 'Invested', 'Cur Value', 'Profit', 'x Mult']
@@ -174,16 +203,8 @@ class Portfolio:
     def __repr__(self):
         return f'Dashboard(): {len(self.assets)} assets'
 
-def main():
-    # TODO: need way to see what currency a ticker will return
-    global CONFIG
-    with open('config.yaml') as f:
-        CONFIG = yaml.load(f, Loader=yaml.FullLoader)
-    
-    # getting api details from config
-    api_key_file = CONFIG['api']['apiKeysFile']
-    api_backend = CONFIG['api']['apiBackend']
-
+def build_api():
+    """
     # get api and associted api key
     with open(api_key_file) as f:
         api_keys = yaml.load(f, Loader=yaml.FullLoader)
@@ -192,12 +213,21 @@ def main():
     else:
         raise ValueError(f'{API_BACKEND} not recognised as an API backend')
     api_key = api_keys[api_backend]
+    """
+    pass
+
+
+def main():
+    # TODO: need way to see what currency a ticker will return
+    global CONFIG
+    with open('config.yaml') as f:
+        CONFIG = yaml.load(f, Loader=yaml.FullLoader)
     
+    backend = build_api()
     # create portfolio class instance with api backend and the defult currency
-    p = Portfolio(api(api_key), CONFIG['dataConversions']['defaultCurrency'])
-    # load data in
+    p = Portfolio(backend, CONFIG['dataConversions']['defaultCurrency'])
+    # load data in & display quickstats
     p.from_csv(CONFIG['data']['filepath'])
-    # show the stats
     p.quickstats()
     
 

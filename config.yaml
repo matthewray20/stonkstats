@@ -15,7 +15,7 @@ data:
     - sell
     - split
 api:
-  apiKeysFile: API_backends/API_keys.yaml
+  apiKeysFile: backends/apis/API_keys.yaml
   apiBackend: alphaVantage
 dataConversions:
   dateFormat: '%d/%m/%Y'
