@@ -49,4 +49,4 @@ class MyTiingoAPI:
     
     @api_error_handling
     def get_historical_prices(self, start_date, end_date, *args):
-        raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented get_hsitorical_prices()')
+        rpass

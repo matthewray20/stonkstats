@@ -12,18 +12,21 @@ class DefaultAPI:
 
     def get_latest_price(self, asset, desired_currency):
         raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented get_latest_price()')
+
+    def _get_security_historical_prices(self, start_date, end_date, *args):
+        raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented _get_security_historical_prices()')
+    
+    def _get_crypto_historical_prices(self, start_date, end_date, *args):
+        raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented _get_crypto_historical_prices()')
+    
+    def get_historical_prices(self, start_date, end_date, *args):
+        raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented get_historical_prices()')
     
     def _get_exchange_rate(self, convert_from, convert_to):
         raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented _get_exchange_rate()')
     
     def get_exchange_rate(self, convert_from, convert_to):
         raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented get_exchange_rate()')
-
-    def _get_historical_prices(self, start_date, end_date, *args):
-        raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented _get_historical_prices()')
-    
-    def get_historical_prices(self, start_date, end_date, *args):
-        raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented get_historical_prices()')
 
     def _get_currency_info(self, asset):
         raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented _get_currency_info()')

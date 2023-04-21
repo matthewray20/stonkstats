@@ -38,7 +38,6 @@ class MyAlphaVantageAPI(DefaultAPI):
     @cache_exchange_rate
     def get_exchange_rate(self, convert_from, convert_to):
         exchange_rate_resp = self._get_exchange_rate(convert_from, convert_to)
-        # get exchange rate and return it
         exchange_rate_json = json.loads(resp.text)
         exchange_rate = float(exchange_rate_json['Realtime Currency Exchange Rate']['5. Exchange Rate'])
         return exchange_rate

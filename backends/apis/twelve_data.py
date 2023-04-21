@@ -42,11 +42,11 @@ class MyTwelveDataAPI(DefaultAPI):
     def get_currency_info(self, ticker):
         return self._get_currency_info(ticker)['currency']
     
-    def _get_historical_prices(self, start_date, end_date, desired_currency, interval='1d', **kwargs):
+    def _get_historical_prices(self, start_date, end_date, desired_currency, interval='1d'):
         return self.td.time_series(symbol=','.join(args), start_date=start, end_date=end, interval=interval, **kwargs).as_json()
 
     @api_error_handling
-    def get_historical_prices(self, start_date, end_date, desired_currency, interval='1d', **kwargs):
+    def get_historical_prices(self, start_date, end_date, desired_currency, interval='1d'):
         # TODO: add currency option here
         data = self._get_historical_prices(start_date, end_date, desired_currency, interval='1d', **kwargs)
         pass

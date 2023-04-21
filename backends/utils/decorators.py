@@ -1,14 +1,17 @@
 #!/usr/bin/env python3
 
+import functools
 import time
 
+# This is a general error handling decorator for the backend api calls
+# Not designed to be specific
 def api_error_handling(func):
+    functools.wraps(func)
     def api_error_handling_wrapper(self, *args, **kwargs):
         # avoid rate limits
         sleep_time = 60 // self.max_requests_per_min + 1
         time.sleep(sleep_time)
         # call func and general error handling
-        # doesnt need details about error as will have tests for that
         try:
             return func(self, *args, **kwargs)
         except Exception as e:
@@ -17,9 +20,11 @@ def api_error_handling(func):
             return None
     return api_error_handling_wrapper
 
-
-
+# This is a layer on top of the get_exchange_rate API method to catch 
+# incoming calls and return the exchange rate if it is in the cache, if not
+# in the cache, make api call and cache result before retuning it
 def cache_exchange_rate(func):
+    functools.wraps(func)
     def cache_exchange_rate_wrapper(self, convert_from, convert_to):
         currency_pair = f'{convert_from}/{convert_to}'
         # check if currency pair in cache - if True return it
