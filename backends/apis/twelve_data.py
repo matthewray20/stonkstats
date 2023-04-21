@@ -17,7 +17,7 @@ class MyTwelveDataAPI(DefaultAPI):
         return self.td.price(symbol=ticker).as_json()
     
     def _get_crypto_latest_price(self, ticker, desired_currency):
-        return self._get_security_latest_price(f'{asset.ticker}/{desired_currency}')
+        return self._get_security_latest_price(f'{ticker}/{desired_currency}')
     
     @api_error_handling
     def get_latest_price(self, asset, desired_currency):
@@ -43,12 +43,12 @@ class MyTwelveDataAPI(DefaultAPI):
         return self._get_currency_info(ticker)['currency']
     
     def _get_historical_prices(self, start_date, end_date, desired_currency, interval='1d'):
-        return self.td.time_series(symbol=','.join(args), start_date=start, end_date=end, interval=interval, **kwargs).as_json()
+        return self.td.time_series(symbol=',', start_date=start_date, end_date=end_date, interval=interval).as_json()
 
     @api_error_handling
     def get_historical_prices(self, start_date, end_date, desired_currency, interval='1d'):
         # TODO: add currency option here
-        data = self._get_historical_prices(start_date, end_date, desired_currency, interval='1d', **kwargs)
+        data = self._get_historical_prices(start_date, end_date, desired_currency, interval='1d')
         pass
         
 

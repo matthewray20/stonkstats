@@ -4,8 +4,8 @@ import pandas as pd
 import yaml
 from matplotlib import pyplot as plt
 from datetime import datetime
-from API_backends.twelve_data import MyTwelveDataAPI
-from API_backends.alpha_vantage import MyAlphaVantageAPI
+from backends.apis.twelve_data import MyTwelveDataAPI
+from backends.apis.alpha_vantage import MyAlphaVantageAPI
 
 # TODO: add throttling config setting to limit api calls
 # TODO: better error handling apis

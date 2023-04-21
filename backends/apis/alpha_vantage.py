@@ -25,7 +25,7 @@ class MyAlphaVantageAPI(DefaultAPI):
     
     @api_error_handling
     def get_latest_price(self, asset, desired_currency):
-        if asset.asset_type == 'crypto': return self_get_crypto_latest_price(asset.ticker, desired_currency)
+        if asset.asset_type == 'crypto': return self._get_crypto_latest_price(asset.ticker, desired_currency)
         price_resp = self._get_latest_price(asset.ticker)
         price_json = json.loads(price_resp.text)
         price = float(price_json['Global Quote']['05. price'])
@@ -38,7 +38,7 @@ class MyAlphaVantageAPI(DefaultAPI):
     @cache_exchange_rate
     def get_exchange_rate(self, convert_from, convert_to):
         exchange_rate_resp = self._get_exchange_rate(convert_from, convert_to)
-        exchange_rate_json = json.loads(resp.text)
+        exchange_rate_json = json.loads(exchange_rate_resp.text)
         exchange_rate = float(exchange_rate_json['Realtime Currency Exchange Rate']['5. Exchange Rate'])
         return exchange_rate
     
