@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from API_backends.default_api import DefaultAPI
+from backends.apis.default_api import DefaultAPI
 from backends.utils.decorators import api_error_handling, cache_exchange_rate
 import requests
 import json

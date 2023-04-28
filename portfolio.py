@@ -6,12 +6,10 @@ from matplotlib import pyplot as plt
 from datetime import datetime
 from backends.apis.twelve_data import MyTwelveDataAPI
 from backends.apis.alpha_vantage import MyAlphaVantageAPI
+from backends.apis.tiingo import MyTiingoAPI
 
-# TODO: add throttling config setting to limit api calls
-# TODO: better error handling apis
 # TODO: add cash position
 # TODO: implement deposists and selling
-
 
 class Split:
     def __init__(self, ratio, date):
@@ -46,10 +44,10 @@ class Cash:
 
 
 class Asset:
-    def __init__(self, ticker, asset_type, asset_api_currency):
+    def __init__(self, ticker, asset_type):
         self.ticker = ticker
         self.asset_type = asset_type
-        self.asset_api_currency = asset_api_currency
+        self.asset_api_currency = None
         self.event_log = None
         self.current_price = None
 
@@ -102,8 +100,12 @@ class Portfolio:
             self.assets[ticker].current_price = self.api.get_latest_price(self.assets[ticker], desired_currency)
     
     def plot_historical(self, start, stop, interval):
-        #data = self.api.get_historical_prices(start, stop, interval, )
-        pass
+        all_data = {}
+        for asset in self.assets:
+            data = self.api.get_historical_prices(asset.ticker, start, stop, interval)
+            all_data[asset.ticker] = data
+            plt.plot(data[0], data[1], legend=asset.ticker)
+        plt.show()
 
     def from_csv(self, filename):
         df = pd.read_csv(filename)
@@ -118,11 +120,13 @@ class Portfolio:
             quantity = float(event['quantity'])
             currency = event['currency']
             event_type = event['eventType']
-            price = float(event['price']) * self.api.which_rate(currency, default_currency) # (1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency))
+            price = float(event['price']) * self.api.which_rate(currency, self.default_currency) # (1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency))
                                           # self.api.rate(currency, default_currency) -> returns 1 if equal, returns exchange rate if not
             # add new asset if needed
             if ticker not in self.assets:
-                self.add_asset(Asset(ticker, event['assetType'], self.api.get_currency_info(ticker)))
+                new_asset = Asset(ticker, event['assetType'])
+                new_asset.asset_api_currency = self.default_currency if new_asset.asset_type == 'crypto' else self.api.get_currency_info(new_asset.ticker)
+                self.add_asset(new_asset)
             
             # add different events
             if event_type == 'buy' or event_type == 'sell':
@@ -195,6 +199,8 @@ class Portfolio:
 
         display_string += f'({currency})'
         print(display_string)
+
+        self.get_historical_prices('2023-03-02', '2023-03-08', '1day')
     
     def show_dashboard(self):
         pass
@@ -204,17 +210,19 @@ class Portfolio:
         return f'Dashboard(): {len(self.assets)} assets'
 
 def build_api():
-    """
     # get api and associted api key
-    with open(api_key_file) as f:
+    with open(CONFIG['api']['apiKeysFile']) as f:
         api_keys = yaml.load(f, Loader=yaml.FullLoader)
+    
+    api_backend = CONFIG['api']['apiBackend']
     if api_backend == 'twelveData': api = MyTwelveDataAPI
     elif api_backend == 'alphaVantage': api = MyAlphaVantageAPI
+    elif api_backend == 'tiingo': api = MyTiingoAPI
     else:
-        raise ValueError(f'{API_BACKEND} not recognised as an API backend')
+        raise ValueError(f'{api_backend} not recognised as an API backend')
     api_key = api_keys[api_backend]
-    """
-    pass
+    return api(api_key)
+
 
 
 def main():

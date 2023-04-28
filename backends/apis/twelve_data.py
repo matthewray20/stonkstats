@@ -22,7 +22,7 @@ class MyTwelveDataAPI(DefaultAPI):
     @api_error_handling
     def get_latest_price(self, asset, desired_currency):
         if asset.asset_type == 'crypto': return float(self._get_crypto_latest_price(asset.ticker, desired_currency)['price'])
-        price = self._get_latest_price(asset.ticker)['price']
+        price = self._get_security_latest_price(asset.ticker)['price']
         # convert currency if api returns in currency other than desired currency
         return float(price) * self.which_rate(asset.asset_api_currency, desired_currency)
     
@@ -42,14 +42,21 @@ class MyTwelveDataAPI(DefaultAPI):
     def get_currency_info(self, ticker):
         return self._get_currency_info(ticker)['currency']
     
-    def _get_historical_prices(self, start_date, end_date, desired_currency, interval='1d'):
-        return self.td.time_series(symbol=',', start_date=start_date, end_date=end_date, interval=interval).as_json()
+    def _get_historical_prices(self, symbol, start_date, end_date, desired_currency, interval='1d'):
+        return self.td.time_series(symbol=symbol, start_date=start_date, end_date=end_date, interval=interval).as_json()
 
     @api_error_handling
-    def get_historical_prices(self, start_date, end_date, desired_currency, interval='1d'):
-        # TODO: add currency option here
-        data = self._get_historical_prices(start_date, end_date, desired_currency, interval='1d')
-        pass
+    def get_historical_prices(self, asset, start_date, end_date, desired_currency, interval='1d', relative=True):
+        ticker = f'{asset.ticker}/{desired_currency}' if asset.asset_type == 'crypto' else asset.ticker
+        data = self._get_historical_prices(ticker, start_date, end_date, interval='1d')
+        datetimes = [period['datetime'] for period in data]
+        if relative:
+            initial_price = data[0]['close']
+            prices = [float(period['close']) / initial_data for period in data]
+        else:
+            rate = self.which_rate(asset.asset_api_currency, desired_currency)
+            prices = [float(period['close']) * rate for period in data]
+        return (datetimes, prices)
         
 
         
