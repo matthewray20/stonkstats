@@ -42,13 +42,16 @@ class MyTwelveDataAPI(DefaultAPI):
     def get_currency_info(self, ticker):
         return self._get_currency_info(ticker)['currency']
     
-    def _get_historical_prices(self, symbol, start_date, end_date, desired_currency, interval='1d'):
+    def _get_security_historical_prices(self, symbol, start_date, end_date, interval):
         return self.td.time_series(symbol=symbol, start_date=start_date, end_date=end_date, interval=interval).as_json()
 
+    def _get_crypto_historical_prices(self, symbol, start_date, end_date, interval):
+        return self._get_security_historical_prices(symbol, start_date, end_date, interval)
+    
     @api_error_handling
     def get_historical_prices(self, asset, start_date, end_date, desired_currency, interval='1d', relative=True):
-        ticker = f'{asset.ticker}/{desired_currency}' if asset.asset_type == 'crypto' else asset.ticker
-        data = self._get_historical_prices(ticker, start_date, end_date, interval='1d')
+        if asset.asset_type == 'crypto': data = self._get_crypto_historical_prices(f'{asset.ticker}/{desired_currency}', start_date, end_date, interval)
+        else: data = self._get_security_historical_prices(asset.ticker, start_date, end_date, interval)
         datetimes = [period['datetime'] for period in data]
         if relative:
             initial_price = data[0]['close']

@@ -42,18 +42,43 @@ class MyAlphaVantageAPI(DefaultAPI):
         exchange_rate = float(exchange_rate_json['Realtime Currency Exchange Rate']['5. Exchange Rate'])
         return exchange_rate
     
-    def _get_historical_prices(self):
-        pass
+    def _get_security_historical_prices(self, ticker, interval):
+        return requests.get(base_url + f'function=TIME_SERIES_DAILY_ADJUSTED&symbol={ticker}' + api_string)
 
-    @api_error_handling
-    def get_historical_prices(self, start_date, end_date, interval='1d', *args):
-        return 0
+    def _get_crypto_historical_prices(self, ticker, interval):
+        return requests.get(base_url + f'function=FX_DAILY&symbol={ticker}' + api_string)
     
+    @api_error_handling
+    def get_historical_prices(self, asset, start_date, end_date, desired_currency, interval='1d', relative=True):
+        # TODO: if start end dates provided, use outputsize=full to get all data, then parse to dates provided - not sure for crypto
+        if asset.asset_type == 'crypto':
+            resp = self._get_crypto_historical_prices(ticker, interval)
+            key = f'4a. close ({desired_currency})'
+        else:
+            resp = self._get_security_historical_prices(ticker, interval)
+            key = '4. close'
+        data = json.loads(resp.text)
+        data = data[func][func]
+        datetimes = list(data.keys())
+        if relative:
+            initial_price = data[datetimes[0]][key]
+            prices = [float(data[datetimes[i]][key]) / initial_data for i in range(len(data))]
+        else:
+            rate = self.which_rate(asset.asset_api_currency, desired_currency)
+            prices = [float(data[datetimes[i]][key]) * rate for i in range(len(data))]
+        return (datetimes, prices)
+        
+
+
     def _get_currency_info(self, ticker):
-        pass
+        return requests.get(self.base_url + f'function=OVERVIEW&symbol={ticker}' + self.api_string)
     
     @api_error_handling
     def get_currency_info(self, ticker):
-        pass
+        resp = self._get_currency_info(ticker)
+        data = json.loads(resp.text)
+        return data['Currency']
+
+    
     
     
