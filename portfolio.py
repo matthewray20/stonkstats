@@ -4,9 +4,7 @@ import pandas as pd
 import yaml
 from matplotlib import pyplot as plt
 from datetime import datetime
-from backends.apis.twelve_data import MyTwelveDataAPI
-from backends.apis.alpha_vantage import MyAlphaVantageAPI
-from backends.apis.tiingo import MyTiingoAPI
+
 
 # TODO: add cash position
 # TODO: implement deposists and selling
@@ -217,28 +215,10 @@ def build_api():
     api_backend = CONFIG['api']['apiBackend']
     if api_backend == 'twelveData': api = MyTwelveDataAPI
     elif api_backend == 'alphaVantage': api = MyAlphaVantageAPI
-    elif api_backend == 'tiingo': api = MyTiingoAPI
+    elif api_backend == 'finnhub': api = MyFinnhubAPI
     else:
         raise ValueError(f'{api_backend} not recognised as an API backend')
     api_key = api_keys[api_backend]
     return api(api_key)
 
 
-
-def main():
-    # TODO: need way to see what currency a ticker will return
-    global CONFIG
-    with open('config.yaml') as f:
-        CONFIG = yaml.load(f, Loader=yaml.FullLoader)
-    
-    backend = build_api()
-    # create portfolio class instance with api backend and the defult currency
-    p = Portfolio(backend, CONFIG['dataConversions']['defaultCurrency'])
-    # load data in & display quickstats
-    p.from_csv(CONFIG['data']['filepath'])
-    p.quickstats()
-    
-
-
-if __name__ == "__main__":
-    main()

@@ -25,6 +25,7 @@ class MyAlphaVantageAPI(DefaultAPI):
     
     @api_error_handling
     def get_latest_price(self, asset, desired_currency):
+        # have to access crypto resp in here
         if asset.asset_type == 'crypto': return self._get_crypto_latest_price(asset.ticker, desired_currency)
         price_resp = self._get_latest_price(asset.ticker)
         price_json = json.loads(price_resp.text)
@@ -54,9 +55,11 @@ class MyAlphaVantageAPI(DefaultAPI):
         if asset.asset_type == 'crypto':
             resp = self._get_crypto_historical_prices(ticker, interval)
             key = f'4a. close ({desired_currency})'
+            func = 'Time Series (Digital Currency Daily)' # Daily only for daily endpoint
         else:
             resp = self._get_security_historical_prices(ticker, interval)
             key = '4. close'
+            func = 'Time Series (Daily)'
         data = json.loads(resp.text)
         data = data[func][func]
         datetimes = list(data.keys())
@@ -68,7 +71,6 @@ class MyAlphaVantageAPI(DefaultAPI):
             prices = [float(data[datetimes[i]][key]) * rate for i in range(len(data))]
         return (datetimes, prices)
         
-
 
     def _get_currency_info(self, ticker):
         return requests.get(self.base_url + f'function=OVERVIEW&symbol={ticker}' + self.api_string)

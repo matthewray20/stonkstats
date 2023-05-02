@@ -16,7 +16,7 @@ data:
     - split
 api:
   apiKeysFile: backends/apis/API_keys.yaml
-  apiBackend: twelveData
+  apiBackend: financialModellingPrep
 dataConversions:
   dateFormat: '%d/%m/%Y'
   defaultCurrency: AUD
