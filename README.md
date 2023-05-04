@@ -20,3 +20,6 @@
 ## Notes
 <p>This was my first go at taking a simple project of mine and building it out with multiple backend support, error handling and greater robustness.</p>
 <p>I know the error handling in the APIs is not the best but it was my first time playing with decorators and I wanted to se them somewhere.
+
+### TODO
+* Add a gui
