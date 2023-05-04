@@ -1,5 +1,3 @@
-/.gitignore
-/data/sharedata.csv
 /backends/apis/API_keys.yaml
 **/__pycache__
 /backend_completion.txt
