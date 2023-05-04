@@ -1,3 +1,4 @@
+/.gitignore
 /data/sharedata.csv
 /backends/apis/API_keys.yaml
 **/__pycache__
