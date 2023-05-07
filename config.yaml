@@ -20,6 +20,5 @@ api:
 dataConversions:
   dateFormat: '%d/%m/%Y'
   defaultCurrency: AUD
-display:
-  colWidth: 12
+
 

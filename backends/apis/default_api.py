@@ -3,6 +3,7 @@
 class DefaultAPI:
     def __init__(self):
         self.exchange_rate_cache = {}
+        self.allowed_historical_intervals = {}
     
     def _get_security_latest_price(self, ticker):
         raise NotImplementedError(f'Class <{self.__class__.__name__}> has not implemented _get_security_latest_price()')
@@ -37,6 +38,13 @@ class DefaultAPI:
     def which_rate(self, asset_currency, desired_currency):
         return 1 if asset_currency == desired_currency else self.get_exchange_rate(asset_currency, desired_currency)
     
+    def check_interval(self, interval):
+        if interval not in self.allowed_historical_intervals:
+            print(f'interval {interval} not accepted be {self.__name__} backend. Using interval=daily')
+            return self.allowed_historical_intervals['daily']
+        else:
+            return self.allowed_historical_intervals[interval]
+    
     @staticmethod
     def _api_error_message(endpoint, *args):
         messages = {
@@ -46,5 +54,7 @@ class DefaultAPI:
             'get_currency_info': 'Error getting currency info'
         }
         return messages[endpoint] if endpoint in messages else 'Unknown Error'
+    
+    
 
 

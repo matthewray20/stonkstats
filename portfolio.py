@@ -17,7 +17,7 @@ class Split:
     def __repr__(self):
         return f'Split(ratio={self.ratio}, date={self.date})'
 
- 
+
 class Trade:
     def __init__(self, quantity, price, date, currency, trade_type):
         self.quantity = quantity
@@ -73,11 +73,13 @@ class Asset:
         return total
         
     def ammount_invested(self):
-        # TODO: account for selling
         total = 0
         for trade in self.event_log:
             if isinstance(trade, Trade) and trade.trade_type == 'buy': total += (trade.quantity * trade.price) # + trade.commision
         return total
+    
+    def is_crypto(self):
+        return self.asset_type == 'crypto'
     
     def __repr__(self):
         return f'Asset({self.ticker}): {len(self.event_log)} events, {self.quantity_held()} current shares'
@@ -97,13 +99,44 @@ class Portfolio:
             print(f'getting latest price for <{ticker}>')
             self.assets[ticker].current_price = self.api.get_latest_price(self.assets[ticker], desired_currency)
     
-    def plot_historical(self, start, stop, interval):
-        all_data = {}
+    def plot_historical(self, start, stop, interval, relative=True):
+        # supported intervals are 
+        #all_data = {}
         for asset in self.assets:
-            data = self.api.get_historical_prices(asset.ticker, start, stop, interval)
-            all_data[asset.ticker] = data
-            plt.plot(data[0], data[1], legend=asset.ticker)
+            dates, prices = self.api.get_historical_prices(asset.ticker, start, stop, interval)
+            if relative: 
+                initial_price = prices[0]
+                prices = [price / initial_price for price in prices]
+            #all_data[asset.ticker] = data
+            plt.plot(dates, prices, legend=asset.ticker)
         plt.show()
+    
+    def show_data(self, data, title):
+        # find max length
+        max_length = 0
+        for key, values in data:
+            key_len = len_key
+            if key_len > max_length: max_length = key_len
+            for a_value in values:
+                value_len = len(str(a_value))
+                if value_len > max_length: max_length = value_len
+        
+        # parameterised strings for printing as a table
+        cols = ['Ticker', 'Quantity', 'Avg Price', 'Invested', 'Cur Value', 'Profit', 'x Mult']
+        title_padding = (max_length * len(cols) + len(cols) - 1)//2 - (len(title) + 2 )//2
+        divider = '-' * ((max_length + 1) * len(cols) - 1) + '\n'
+        
+        display_string = f"{'-' * title_padding} {title} {'-' * (title_padding + 1)}\n"
+        display_string += f"|".join([f'{col:^{max_length}}' for col in cols]) + '\n'
+        display_string += divider
+        # print here
+        display_string += f'{"Total":>{col_width}}|{"n/a":>{col_width}}|{"n/a":>{col_width}}|{total_invested:{col_width}.2f}|{total_net_value:{col_width}.2f}|{total_net_profit:{col_width}.2f}|{total_xmult:{col_width}.2f}\n'
+        display_string += divider
+        
+
+        display_string += f'({currency})'
+        print(display_string)
+
 
     def from_csv(self, filename):
         df = pd.read_csv(filename)
@@ -113,17 +146,17 @@ class Portfolio:
         
         for _, event in df.iterrows():
             # get data of event
-            ticker = event['ticker']
+            ticker = event['ticker'].to_upper()
             date = datetime.strptime(event['date'], CONFIG['dataConversions']['dateFormat'])
             quantity = float(event['quantity'])
-            currency = event['currency']
-            event_type = event['eventType']
+            currency = event['currency'].to_upper()
+            event_type = event['eventType'].to_lower()
             price = float(event['price']) * self.api.which_rate(currency, self.default_currency) # (1 if currency == self.default_currency else self.api.get_exchange_rate(currency, self.default_currency))
                                           # self.api.rate(currency, default_currency) -> returns 1 if equal, returns exchange rate if not
             # add new asset if needed
             if ticker not in self.assets:
                 new_asset = Asset(ticker, event['assetType'])
-                new_asset.asset_api_currency = self.default_currency if new_asset.asset_type == 'crypto' else self.api.get_currency_info(new_asset.ticker)
+                new_asset.asset_api_currency = self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker)
                 self.add_asset(new_asset)
             
             # add different events
@@ -158,19 +191,9 @@ class Portfolio:
         # convert to default currency
         #rate = 1 if currency == self.default_currency else self.api.get_exchange_rate(convert_from=self.default_currency, convert_to=currency)
         rate = self.api.which_rate(currency, self.default_currency)
-        # parameterised strings for printing as a table
-        col_width = CONFIG['display']['colWidth']
-        cols = ['Ticker', 'Quantity', 'Avg Price', 'Invested', 'Cur Value', 'Profit', 'x Mult']
-        title = 'Quickstats'
-        title_padding = (col_width * len(cols) + len(cols) - 1)//2 - (len(title) + 2 )//2
-        divider = '-' * ((col_width + 1) * len(cols) - 1) + '\n'
-        
-        display_string = f"{'-' * title_padding} {title} {'-' * (title_padding + 1)}\n"
-        display_string += f"|".join([f'{col:^{col_width}}' for col in cols]) + '\n'
-        display_string += divider
-
         total_invested, total_net_value = 0, 0
 
+        data = {}
         # calculating stats
         for ticker in self.assets:
             asset = self.assets[ticker]
@@ -183,7 +206,8 @@ class Portfolio:
             total_net_value += net_value
             net_profit = net_value - invested
             xmult = net_profit / invested
-
+            
+            data[ticker] = [num_shares, avg_price, invested, net_value, net_profit, xmult]
             # printing row in table
             display_string += f'{ticker:{col_width}}|{num_shares:{col_width}.2f}|{avg_price:{col_width}.2f}|{invested:{col_width}.2f}|{net_value:{col_width}.2f}|{net_profit:{col_width}.2f}|{xmult:{col_width}.2f}\n'
             display_string += divider
@@ -191,12 +215,8 @@ class Portfolio:
         # add total row
         total_net_profit = total_net_value - total_invested
         total_xmult = total_net_profit / total_invested
-        display_string += f'{"Total":>{col_width}}|{"n/a":>{col_width}}|{"n/a":>{col_width}}|{total_invested:{col_width}.2f}|{total_net_value:{col_width}.2f}|{total_net_profit:{col_width}.2f}|{total_xmult:{col_width}.2f}\n'
-        display_string += divider
+        data['Total'] = [None, None, total_invested, total_net_value, total_net_profit, total_xmult]
         
-
-        display_string += f'({currency})'
-        print(display_string)
 
         self.get_historical_prices('2023-03-02', '2023-03-08', '1day')
     
