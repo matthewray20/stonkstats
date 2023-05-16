@@ -32,6 +32,7 @@ class Portfolio:
         self.merge_in(other_portfolio)
     
     def merge_in(self, other_portfolio):
+        # TODO: 
         pass
         
     def set_default_currency(self, currency):
@@ -60,13 +61,11 @@ class Portfolio:
     
     def plot_historical(self, start, stop, interval, relative=True):
         # supported intervals are 
-        #all_data = {}
         for asset in self.assets:
             dates, prices = self.api.get_historical_prices(asset.ticker, start, stop, interval)
             if relative: 
                 initial_price = prices[0]
                 prices = [price / initial_price for price in prices]
-            #all_data[asset.ticker] = data
             plt.plot(dates, prices, legend=asset.ticker)
         plt.show()
     
@@ -75,17 +74,14 @@ class Portfolio:
         for key in data:
             key_len = len(key)
             if key_len > max_length: max_length = key_len
-        
         # parameterised strings for table creation 
         cols = data.keys()
         title_padding = (max_length * len(cols) + len(cols) - 1)//2 - (len(title) + 1 )//2
         divider = '-' * ((max_length + 1) * len(cols) - 1) + '\n'
-        
         # creating table header
         display_string = f"{'-' * title_padding} {title} {'-' * (title_padding + 1)}\n"
         display_string += f"|".join([f'{col:^{max_length}}' for col in cols]) + '\n'
         display_string += divider
-
         # printing row in table
         for key, values in data.items():
             display_string += f'{key:{max_length}}'
@@ -101,10 +97,12 @@ class Portfolio:
             display_string += footnote
         
         return display_string
+    
+    def add_event(self, ticker, date, quantity, currency, event_type, price):
+        self.assets[ticker].add_event(date, quantity, currency, event_type, price)
 
     def add_from_csv(self, filename):
         df = pd.read_csv(filename)
-        
         for _, event in df.iterrows():
             # get data of event
             ticker = event['ticker'].upper()
@@ -113,36 +111,13 @@ class Portfolio:
             currency = event['currency'].upper()
             event_type = event['eventType'].lower()
             price = float(event['price']) * self.api.which_rate(currency, self.default_currency) 
-            
             # add new asset if needed
             if ticker not in self.assets:
                 new_asset = Asset(ticker, event['assetType'])
-                new_asset.asset_api_currency = self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker)
+                new_asset.set_api_currency(self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker))
                 self.add_asset(new_asset)
-            
             # add different events
-            if event_type == 'buy' or event_type == 'sell':
-                self.assets[ticker].add_event(
-                    Trade(
-                        quantity=quantity,
-                        price=price, 
-                        trade_type=event_type, 
-                        date=date, 
-                        currency=self.default_currency))
-            elif event_type == 'split':
-                self.assets[ticker].add_event(
-                    Split(
-                        ratio=quantity,
-                        date=date))
-            elif event_type == 'deposit' or event_type == 'withdrawl':
-                self.assets['ticker'].add_event(
-                    Cash(
-                        quantity=quantity,
-                        date=date,
-                        currency=currency,
-                        cash_type=event_type))
-            else:
-                raise ValueError(f'Incorrect event type {type(event_type)}. Should be buy, sell, or split')
+            self.add_event(ticker, date, quantity, currency, event_type, price)
 
     def quickstats(self, currency=None):
         if currency is None: currency = self.default_currency
@@ -150,12 +125,12 @@ class Portfolio:
         self.get_latest_prices(currency)
         rate = self.api.which_rate(currency, self.default_currency)
         total_invested, total_net_value = 0, 0
-
         # calculating stats
         data = {}
         for ticker in self.assets:
             asset = self.assets[ticker]
             num_shares = asset.quantity_held()
+            if num_shares == 0: continue
             invested = asset.ammount_invested() * rate
             total_invested += invested
             avg_price = invested / num_shares
@@ -164,14 +139,13 @@ class Portfolio:
             net_profit = net_value - invested
             xmult = net_profit / invested
             data[ticker] = [num_shares, avg_price, invested, net_value, net_profit, xmult]
-        
         # add total row
         total_net_profit = total_net_value - total_invested
         total_xmult = total_net_profit / total_invested
         data['Total'] = [None, None, total_invested, total_net_value, total_net_profit, total_xmult]
         
         footnote = f'{currency}'
-        self.show_data(data, 'Quickstats', footnote=footnote, max_length=int(total_net_value))
+        self.show_data(data, 'Quickstats', footnote=footnote, max_length=int(total_net_value)+3)
     
     def show_dashboard(self):
         pass

@@ -12,6 +12,9 @@ class Asset:
         self.current_price = None
         self.cash = 0
     
+    def set_api_currency(self, currency):
+        self.asset_api_currency = currency
+    
     def __eq__(self, other):
         checks = [
             self.ticker == other.ticker,
@@ -25,8 +28,22 @@ class Asset:
         for other_event in other.event_log:
             if other_event not in self.event_log: self.add_event(other_event)
 
-    def add_event(self, new_event):
-        # update cash balance here? - not done in order. What if from portfolio side
+    def add_event(self, date, quantity, currency, event_type, price):
+        # create specific event instance
+        if event_type == 'buy' or event_type == 'sell':
+            new_event = Trade(
+                quantity=quantity,
+                price=price, 
+                trade_type=event_type, 
+                date=date, 
+                currency=self.default_currency)
+        elif event_type == 'split':
+                new_event = Split(
+                    ratio=quantity,
+                    date=date)
+        else:
+            raise ValueError(f'Unrecognised event_type {event_type}. Must be buy/sell/split')
+        # insert event
         if self.event_log is None:
             assert not isinstance(new_event, Split), f"First trade for ticker={self.ticker} can not be type=Split"
             self.event_log = [new_event]
