@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from events import Split, Trade
+from events import Split
 
 # TODO: add cash position
 # TODO: implement deposists and selling
@@ -33,15 +33,22 @@ class Asset:
 
     #def add_event(self, date, quantity, currency, event_type, price, allow_duplicates=False):
     def add_event(self, new_event, allow_duplicates=True):
+        print(f"calling add_event from Asset.add_event - allow_duplicates={allow_duplicates}")
         # insert event
         if self.event_log is None:
             assert not isinstance(new_event, Split), f"First trade for ticker={self.ticker} can not be type=Split"
             self.event_log = [new_event]
         elif not allow_duplicates and new_event in self.event_log:
+            print("not allowing duplicate in")
             return
         else:
             # Splits will always be put last -> their date is after market close so after trades that day
+            #print('new_event')
+            #print(new_event)
             for i, logged_event in enumerate(self.event_log):
+                #print('logged event', i)
+                #print(logged_event)
+                print('\ttesting equality:', new_event == logged_event)
                 if (new_event.date < logged_event.date) or (new_event.date == logged_event.date and isinstance(logged_event, Split) and isinstance(new_event, Trade)):
                     self.event_log.insert(i, new_event)
                     return

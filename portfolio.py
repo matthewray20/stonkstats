@@ -6,6 +6,7 @@ import pickle
 from matplotlib import pyplot as plt
 from datetime import datetime
 from asset import Asset
+from events import Split, Trade
 from backends.apis.twelve_data import MyTwelveDataAPI
 from backends.apis.alpha_vantage import MyAlphaVantageAPI
 from backends.apis.financial_modelling_prep import MyFinancialModellingPrepAPI
@@ -63,6 +64,7 @@ class Portfolio:
         self.assets[new_asset.ticker] = new_asset
     
     def add_asset_event(self, ticker, date, quantity, price, event_type, currency, allow_duplicates=False):
+        print(f"calling add_asset_event from Portfolio.add_asset_event - allow_duplicates={allow_duplicates}")
         if event_type == 'buy' or event_type == 'sell':
             new_event = Trade(
                 quantity=quantity,
@@ -92,10 +94,11 @@ class Portfolio:
             # add new asset if needed
             if ticker not in self.assets:
                 new_asset = Asset(ticker, event['assetType'])
-                new_asset.set_api_currency(self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker))
+                new_asset.set_api_currency('TEST')#self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker))
                 self.add_asset(new_asset)
             # add different events
-            self.add_asset_event(ticker, ticker, date, quantity, price, event_type, self.default_currency)
+            print("calling add_asset from Portfolio.add_from_csv")
+            self.add_asset_event(ticker, date, quantity, price, event_type, self.default_currency)
     
     def get_latest_prices(self, desired_currency):
         for ticker in self.assets:

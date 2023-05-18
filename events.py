@@ -6,6 +6,7 @@ class Split:
         self.date = date
     
     def __eq__(self, other):
+        if not isinstance(other, Split): return False
         checks = [
             self.ratio == other.ratio,
             self.date == other.date]
@@ -24,6 +25,7 @@ class Trade:
         self.trade_type = trade_type
     
     def __eq__(self, other):
+        if not isinstance(other, Trade): return False
         checks = [
             self.quantity == other.quantity,
             self.price == other.price,
@@ -32,9 +34,8 @@ class Trade:
             self.trade_type == other.trade_type]
         return all(checks)
 
-    
     def __repr__(self):
         name = self.trade_type
-        name[0] = name[0].upper()
-        return f'{name}(quantity={self.quantity}, price={self.price}, date={self.date}, currency={self.currency})'
+        new_name = name[0].upper() + name[1:]
+        return f'{new_name}(quantity={self.quantity}, price={self.price}, date={self.date}, currency={self.currency})'
 
