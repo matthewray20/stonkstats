@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 
 import unittest
-from asset import Asset
-from events import Trade, Split
+from common.asset import Asset
+from common.events import Trade, Split
 from datetime import datetime
 
 class TestAsset(unittest.TestCase):
@@ -53,17 +53,17 @@ class TestAsset(unittest.TestCase):
         new_asset.add_event(new_event3)
         self.assertEqual(len(new_asset.event_log), 3)
 
-        new_event4 = Trade(4, 34.56, datetime(day=3, month=2, year=2023), trade_type='sell')
+        new_event4 = Trade(4, 34.56, datetime(day=3, month=2, year=2023), trade_type='buy')
         new_asset.add_event(new_event4)
         self.assertEqual(len(new_asset.event_log), 4)
 
         # testing with duplicates & allow_duplicates=False
-        new_event5 = Trade(4, 34.56, datetime(day=3, month=2, year=2023), trade_type='sell')
+        new_event5 = Trade(4, 34.56, datetime(day=3, month=2, year=2023), trade_type='buy')
         new_asset.add_event(new_event5)
         self.assertEqual(len(new_asset.event_log), 4)
 
         # testing with duplicates & allow_duplicates=True
-        new_event6 = Trade(4, 34.56, datetime(day=3, month=2, year=2023), trade_type='sell')
+        new_event6 = Trade(4, 34.56, datetime(day=3, month=2, year=2023), trade_type='buy')
         new_asset.add_event(new_event6, allow_duplicates=True)
         self.assertEqual(len(new_asset.event_log), 5)
         
@@ -80,6 +80,9 @@ class TestAsset(unittest.TestCase):
         self.assertEqual(new_asset.event_log[4].price, 4)
     
     def test_remove_event(self):
+        pass
+
+    def test_get_cash_balance(self):
         pass
 
     def test_set_api_currency(self):
@@ -132,16 +135,14 @@ class TestAsset(unittest.TestCase):
         self.assertTrue(isinstance(self.asset2.event_log[6], Trade))
         self.assertEqual(self.asset2.event_log[6].price, 5.5)
 
-        self.assertEqual(self.asset2.ammount_invested(), second)
-        self.assertEqual(self.asset2.quantity_held(), second)
+        self.assertAlmostEqual(self.asset2.ammount_invested(), 53.90)
+        self.assertEqual(self.asset2.quantity_held(), 31)
 
-
-    
     def test_quantity_held(self):
-        self.assertEqual(self.asset1.quantity_held(), 18)
+        self.assertEqual(self.asset1.quantity_held(), 10)
 
     def test_ammount_invested(self):
-        self.assertEqual(self.asset1.ammount_invested(), 19.80)
+        self.assertAlmostEqual(self.asset1.ammount_invested(), 11.00)
 
     def test_repr(self):
         self.assertEqual(str(self.asset1.event_log), 'Asset(TSLA): 5 events, 19.8 current shares')

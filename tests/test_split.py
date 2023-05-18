@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import unittest
-from events import Split
+from common.events import Split
 from datetime import datetime
 
 

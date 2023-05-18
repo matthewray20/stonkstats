@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import unittest
-from events import Trade
+from common.events import Trade
 from datetime import datetime
 
 
