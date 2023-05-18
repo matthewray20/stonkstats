@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+from events import Split, Trade
+
 # TODO: add cash position
 # TODO: implement deposists and selling
 
@@ -21,32 +23,22 @@ class Asset:
             self.asset_type == other.asset_type]
         return all(checks)
         
-    def merge_in(self, other):
+    def merge_asset(self, other):
         if self.asset_api_currency is None and other.asset_api_currency is not None: self.asset_api_currency = other.asset_api_currency
         if self.current_price is None and other.current_price is not None: self.current_price = other.current_price
-        if self.event_log is None or other.event_log is None: return
+        if self.event_log is None and other.event_log is None: return
+        if self.event_log is None and other.event_log is not None: self.event_log = other.event_log
         for other_event in other.event_log:
-            if other_event not in self.event_log: self.add_event(other_event)
+            self.add_event(other_event, allow_duplicates=False)
 
-    def add_event(self, date, quantity, currency, event_type, price):
-        # create specific event instance
-        if event_type == 'buy' or event_type == 'sell':
-            new_event = Trade(
-                quantity=quantity,
-                price=price, 
-                trade_type=event_type, 
-                date=date, 
-                currency=self.default_currency)
-        elif event_type == 'split':
-                new_event = Split(
-                    ratio=quantity,
-                    date=date)
-        else:
-            raise ValueError(f'Unrecognised event_type {event_type}. Must be buy/sell/split')
+    #def add_event(self, date, quantity, currency, event_type, price, allow_duplicates=False):
+    def add_event(self, new_event, allow_duplicates=True):
         # insert event
         if self.event_log is None:
             assert not isinstance(new_event, Split), f"First trade for ticker={self.ticker} can not be type=Split"
             self.event_log = [new_event]
+        elif not allow_duplicates and new_event in self.event_log:
+            return
         else:
             # Splits will always be put last -> their date is after market close so after trades that day
             for i, logged_event in enumerate(self.event_log):

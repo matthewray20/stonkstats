@@ -1,16 +1,15 @@
 #!/usr/bin/env python3
+
 import pandas as pd
 import yaml
 import pickle
 from matplotlib import pyplot as plt
 from datetime import datetime
 from asset import Asset
-from events import Split, Trade, Cash
 from backends.apis.twelve_data import MyTwelveDataAPI
 from backends.apis.alpha_vantage import MyAlphaVantageAPI
 from backends.apis.financial_modelling_prep import MyFinancialModellingPrepAPI
 
-# TODO: fix from_csv to use general methods - make similar to merge_in
 
 class Portfolio:
     def __init__(self):
@@ -18,23 +17,10 @@ class Portfolio:
         self.default_currency = 'AUD'
         self.date_format = None
         self.api = None
-
-    def add_asset(self, new_asset):
-        self.assets[new_asset.ticker] = new_asset
     
-    def save_to(self, name):
-        with open(f'{name}.pkl', 'wb') as f:
-            pickle.dump(self, f)
+    def __repr__(self):
+        return f'Dashboard(): {len(self.assets)} assets'
     
-    def add_from_save(self, name):
-        with open(f'{name}.pkl', 'rb') as f:
-            other_portfolio = pickle.load(f)
-        self.merge_in(other_portfolio)
-    
-    def merge_in(self, other_portfolio):
-        # TODO: 
-        pass
-        
     def set_default_currency(self, currency):
         self.default_currency = currency
     
@@ -53,7 +39,64 @@ class Portfolio:
         else:
             raise ValueError(f'{backend} not recognised as an API backend')
         self.api = api(api_key)
-
+    
+    def num_assets(self):
+        return len(self.assets)
+    
+    def save_to(self, name):
+        with open(f'{name}.pkl', 'wb') as f:
+            pickle.dump(self, f)
+    
+    def add_from_save(self, filename):
+        with open(filename, 'rb') as f:
+            other_portfolio = pickle.load(f)
+        self.merge_in(other_portfolio)
+    
+    def merge_in(self, other):
+        assert isinstance(other, Portfolio)
+        if self.num_assets() == 0 and other.num_assets != 0: self.assets = other.assets
+        for asset in other.assets:
+            if asset not in self.assets: self.add_asset(asset)
+            else: self.assets[asset.ticker].merge_in(asset)
+        
+    def add_asset(self, new_asset):
+        self.assets[new_asset.ticker] = new_asset
+    
+    def add_asset_event(self, ticker, date, quantity, price, event_type, currency, allow_duplicates=False):
+        if event_type == 'buy' or event_type == 'sell':
+            new_event = Trade(
+                quantity=quantity,
+                price=price, 
+                trade_type=event_type, 
+                date=date, 
+                currency=currency)
+        elif event_type == 'split':
+                new_event = Split(
+                    ratio=quantity,
+                    date=date)
+        else:
+            raise ValueError(f'Unrecognised event_type {event_type}. Must be buy/sell/split')
+        
+        self.assets[ticker].add_event(new_event, allow_duplicates)
+    
+    def add_from_csv(self, filename):
+        df = pd.read_csv(filename)
+        for _, event in df.iterrows():
+            # get data of event
+            ticker = event['ticker'].upper()
+            date = datetime.strptime(event['date'], self.date_format)
+            quantity = float(event['quantity'])
+            currency = event['currency'].upper()
+            event_type = event['eventType'].lower()
+            price = float(event['price']) * self.api.which_rate(currency, self.default_currency) 
+            # add new asset if needed
+            if ticker not in self.assets:
+                new_asset = Asset(ticker, event['assetType'])
+                new_asset.set_api_currency(self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker))
+                self.add_asset(new_asset)
+            # add different events
+            self.add_asset_event(ticker, ticker, date, quantity, price, event_type, self.default_currency)
+    
     def get_latest_prices(self, desired_currency):
         for ticker in self.assets:
             print(f'getting latest price for <{ticker}>')
@@ -98,27 +141,6 @@ class Portfolio:
         
         return display_string
     
-    def add_event(self, ticker, date, quantity, currency, event_type, price):
-        self.assets[ticker].add_event(date, quantity, currency, event_type, price)
-
-    def add_from_csv(self, filename):
-        df = pd.read_csv(filename)
-        for _, event in df.iterrows():
-            # get data of event
-            ticker = event['ticker'].upper()
-            date = datetime.strptime(event['date'], self.date_format)
-            quantity = float(event['quantity'])
-            currency = event['currency'].upper()
-            event_type = event['eventType'].lower()
-            price = float(event['price']) * self.api.which_rate(currency, self.default_currency) 
-            # add new asset if needed
-            if ticker not in self.assets:
-                new_asset = Asset(ticker, event['assetType'])
-                new_asset.set_api_currency(self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker))
-                self.add_asset(new_asset)
-            # add different events
-            self.add_event(ticker, date, quantity, currency, event_type, price)
-
     def quickstats(self, currency=None):
         if currency is None: currency = self.default_currency
         # get latest prices for each asset
@@ -150,9 +172,5 @@ class Portfolio:
     def show_dashboard(self):
         pass
         # TODO: GUI
-            
-    def __repr__(self):
-        return f'Dashboard(): {len(self.assets)} assets'
-
-
+     
 

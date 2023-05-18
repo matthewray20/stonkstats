@@ -34,5 +34,7 @@ class Trade:
 
     
     def __repr__(self):
-        return f'{self.trade_type}(quantity={self.quantity}, price={self.price}, date={self.date}, currency={self.currency})'
+        name = self.trade_type
+        name[0] = name[0].upper()
+        return f'{name}(quantity={self.quantity}, price={self.price}, date={self.date}, currency={self.currency})'
 
