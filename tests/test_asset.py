@@ -82,9 +82,10 @@ class TestAsset(unittest.TestCase):
         self.assertNotEqual(asset4, self.asset1)
     
     def test_remove_ith_event(self):
-        remove_event = self.asset1.event_log[2] # Should be the Split
+        event_i = 2
+        remove_event = self.asset1.event_log[event_i] # Should be the Split
         self.assertEqual(len(self.asset1.event_log), 5)
-        self.asset1.remove_ith_event(i)
+        self.asset1.remove_ith_event(event_i)
         self.assertEqual(len(self.asset1.event_log), 4)
         self.assertTrue(remove_event not in self.asset1.event_log)
 
