@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-from events import Split
+from common.events import Split, Trade
 
 # TODO: add cash position
 # TODO: implement deposists and selling
@@ -12,6 +12,7 @@ class Asset:
         self.asset_api_currency = None
         self.event_log = None
         self.current_price = None
+        self.historical_prices = None
         self.cash = 0
     
     def set_api_currency(self, currency):
@@ -50,9 +51,12 @@ class Asset:
                     return
             self.event_log.append(new_event)
     
+    def remove_ith_event(self, i):
+        self.event_log.pop(i)
+    
     def is_crypto(self):
         return self.asset_type == 'crypto'
-    
+        
     def reset_cash_balance(self):
         self.cash = 0
 
@@ -71,7 +75,14 @@ class Asset:
         total = 0
         for event in self.event_log:
             if isinstance(event, Trade) and event.trade_type == 'buy': total += (event.quantity * event.price) # + event.commision
+            if isinstance(event, Trade) and event.trade_type == 'sell': total -= (event.quantity * event.price)
         return total
+    
+    def update_cash_balance(self):
+        for event in self.event_log:
+            if isinstance(event, Trade):
+                if event.trade_type == 'buy': self.cash -= event.price * event.quantity
+                if event.trade_type == 'sell': self.cash += event.price * event.quantity
     
     def __repr__(self):
         return f'Asset({self.ticker}): {len(self.event_log)} events, {self.quantity_held()} current shares'

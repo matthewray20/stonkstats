@@ -5,8 +5,8 @@ import yaml
 import pickle
 from matplotlib import pyplot as plt
 from datetime import datetime
-from asset import Asset
-from events import Split, Trade
+from common.asset import Asset
+from common.events import Split, Trade
 from backends.apis.twelve_data import MyTwelveDataAPI
 from backends.apis.alpha_vantage import MyAlphaVantageAPI
 from backends.apis.financial_modelling_prep import MyFinancialModellingPrepAPI
@@ -21,6 +21,13 @@ class Portfolio:
     
     def __repr__(self):
         return f'Dashboard(): {len(self.assets)} assets'
+    
+    def __eq__(self, other):
+        checks = [
+            self.assets == other.assets,
+            self.default_currency == other.default_currency
+        ]
+        return all(checks)
     
     def set_default_currency(self, currency):
         self.default_currency = currency
@@ -44,27 +51,38 @@ class Portfolio:
     def num_assets(self):
         return len(self.assets)
     
-    def save_to(self, name):
-        with open(f'{name}.pkl', 'wb') as f:
+    def save_as_pickle(self, filename):
+        with open(filename, 'wb') as f:
             pickle.dump(self, f)
     
-    def add_from_save(self, filename):
+    def add_from_pickle(self, filename):
         with open(filename, 'rb') as f:
             other_portfolio = pickle.load(f)
-        self.merge_in(other_portfolio)
+        self.merge_portfolio(other_portfolio)
     
-    def merge_in(self, other):
+    def merge_portfolio(self, other):
         assert isinstance(other, Portfolio)
-        if self.num_assets() == 0 and other.num_assets != 0: self.assets = other.assets
-        for asset in other.assets:
-            if asset not in self.assets: self.add_asset(asset)
-            else: self.assets[asset.ticker].merge_in(asset)
+        if self.num_assets() == 0 and other.num_assets() != 0: self.assets = other.assets
+        for ticker, asset in other.assets.items():
+            if ticker not in self.assets: self.add_existing_asset(asset)
+            else: self.assets[ticker].merge_asset(asset)
         
-    def add_asset(self, new_asset):
-        self.assets[new_asset.ticker] = new_asset
+    def add_new_asset(self, ticker, asset_type):
+        new_asset = Asset(ticker, asset_type)
+        new_asset.set_api_currency(self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker))
+        self.add_existing_asset(new_asset)
+
+    def add_existing_asset(self, new_asset):
+        if new_asset in self.assets.values(): self.assets[an_asset.ticker].merge_asset(new_asset)
+        else: self.assets[new_asset.ticker] = new_asset
+    
+    def remove_asset(self, ticker):
+        self.assets.pop(ticker)
+    
+    def remove_asset_ith_event(self, ticker, i):
+        self.assets[ticker].remove_ith_event(i)
     
     def add_asset_event(self, ticker, date, quantity, price, event_type, currency, allow_duplicates=False):
-        print(f"calling add_asset_event from Portfolio.add_asset_event - allow_duplicates={allow_duplicates}")
         if event_type == 'buy' or event_type == 'sell':
             new_event = Trade(
                 quantity=quantity,
@@ -93,27 +111,29 @@ class Portfolio:
             price = float(event['price']) * self.api.which_rate(currency, self.default_currency) 
             # add new asset if needed
             if ticker not in self.assets:
-                new_asset = Asset(ticker, event['assetType'])
-                new_asset.set_api_currency('TEST')#self.default_currency if new_asset.is_crypto() else self.api.get_currency_info(new_asset.ticker))
-                self.add_asset(new_asset)
+                self.add_asset(ticker, event['assetType'])
             # add different events
-            print("calling add_asset from Portfolio.add_from_csv")
             self.add_asset_event(ticker, date, quantity, price, event_type, self.default_currency)
     
     def get_latest_prices(self, desired_currency):
         for ticker in self.assets:
-            print(f'getting latest price for <{ticker}>')
             self.assets[ticker].current_price = self.api.get_latest_price(self.assets[ticker], desired_currency)
     
-    def plot_historical(self, start, stop, interval, relative=True):
-        # supported intervals are 
+    def get_historical_prices(start, stop, interval, relative=True):
         for asset in self.assets:
             dates, prices = self.api.get_historical_prices(asset.ticker, start, stop, interval)
             if relative: 
                 initial_price = prices[0]
                 prices = [price / initial_price for price in prices]
+            self.assets[asset.ticker].historical_prices = (dates, prices)
+
+    def plot_historical(self):
+        for asset in self.assets:
+            dates, prices = asset.historical_prices
+            if dates is None or prices is None: continue
             plt.plot(dates, prices, legend=asset.ticker)
         plt.show()
+    
     
     def as_table(self, data, title, max_length=0, footnote=None):
         # find max length for printing
@@ -173,7 +193,7 @@ class Portfolio:
         self.show_data(data, 'Quickstats', footnote=footnote, max_length=int(total_net_value)+3)
     
     def show_dashboard(self):
-        pass
         # TODO: GUI
+        raise NotImplementedError()
      
 
