@@ -35,9 +35,9 @@ class Portfolio:
     def set_data_date_format(self, data_format):
         self.date_format = data_format
     
-    def set_backend(self, backend):
+    def set_backend(self, api_keys_filename, backend):
         # get api and associted api key
-        with open('backends/apis/API_keys.yaml', 'r') as f:
+        with open(api_keys_filename, 'r') as f:
             api_keys = yaml.load(f, Loader=yaml.FullLoader)
         api_key = api_keys[backend]
         
@@ -49,9 +49,9 @@ class Portfolio:
         self.api = api(api_key)
     
     def setup_from_config(self, config):
-        if 'defaultCurrency' in config.keys(): self.set_default_currency(config['defaultCurrency'])
-        if 'dateFormat' in config.keys(): self.set_data_date_format(config['dateFormat'])
-        if 'backend' in config.keys(): self.set_backend(config['backend'])
+        if 'defaultCurrency' in config['dataConversions'].keys(): self.set_default_currency(config['dataConversions']['defaultCurrency'])
+        if 'dateFormat' in config['dataConversions'].keys(): self.set_data_date_format(config['dataConversions']['dateFormat'])
+        if 'apiBackend' in config['api'].keys() and 'apiKeysFile' in config['api'].keys(): self.set_backend(config['api']['apiKeysFile'], config['api']['apiBackend'])
     
     def num_assets(self):
         return len(self.assets)
@@ -116,7 +116,7 @@ class Portfolio:
             price = float(event['price']) * self.api.which_rate(currency, self.default_currency) 
             # add new asset if needed
             if ticker not in self.assets:
-                self.add_asset(ticker, event['assetType'])
+                self.add_new_asset(ticker, event['assetType'])
             # add different events
             self.add_asset_event(ticker, date, quantity, price, event_type, self.default_currency)
     
