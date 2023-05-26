@@ -1,21 +1,8 @@
 ---
 data:
-  filepath: data/sharedata.csv
-  headers:
-    - assetType
-    - price
-    - ticker
-    - quantity
-    - eventType
-    - date
-    - currency
-    - commision
-  events: 
-    - buy
-    - sell
-    - split
+  filename: example_data.csv
 api:
-  apiKeysFile: backends/apis/API_keys.yaml
+  apiKeysFile: example_API_keys.yaml
   apiBackend: financialModellingPrep
 dataConversions:
   dateFormat: '%d/%m/%Y'

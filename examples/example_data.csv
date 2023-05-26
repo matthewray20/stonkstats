@@ -1,0 +1,10 @@
+ticker,quantity,price,eventType,date,assetType,currency,commision
+TSLA,4,324.66,buy,21/3/2023,security,USD,10.05
+TSLA,2,355.73,sell,29/3/2023,security,USD,null
+TSLA,16,190,buy,16/5/2023,security,USD,10.05
+AAPL,2,234.82,buy,21/5/2023,security,USD,10.05
+AAPL,4,202.94,buy,21/5/2023,security,USD,10.05
+TSLA,5,null,split,29/5/2023,security,USD,null
+ETH,1.5234,3459.2092,buy,20/5/2021,crypto,AUD,null
+BTC,0.0134,52014.6395,buy,20/5/2021,crypto,AUD,null
+DOGE,1420.69,0.4596,buy,20/5/2021,crypto,AUD,null
