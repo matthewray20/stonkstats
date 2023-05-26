@@ -1,6 +1,5 @@
 
 from portfolio import Portfolio
-from portfolio import build_api
 import yaml
 
 def main():

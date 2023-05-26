@@ -36,19 +36,19 @@ class MyFinancialModellingPrepAPI(DefaultAPI):
         return float(data[0]['price']) * rate
 
     def _get_security_historical_prices(self, ticker, start_date, end_date, interval):
-        return requests.get(self.base_url + f'api/v3/historical-price-full/{ticker}?from={start_date}&to={end_date}&apikey={aself.pi_key}')
+        return requests.get(self.base_url + f'api/v3/historical-price-full/{ticker}?from={start_date}&to={end_date}&apikey={self.api_key}')
     
     def _get_crypto_historical_prices(self, ticker, start_date, end_date, interval):
-        return requests.get(self.base_url + f'api/v3/historical-price-full/{ticker}USD?from={start_date}&to={end_date}&apikey={api_key}')
+        return requests.get(self.base_url + f'api/v3/historical-price-full/{ticker}USD?from={start_date}&to={end_date}&apikey={self.api_key}')
 
     #@api_error_handling
     def get_historical_prices(self, asset, start_date, end_date, desired_currency, interval):
         interval = self.check_interval(interval)
         if asset.is_crypto(): 
-            resp = self._get_crypto_historical_prices(ticker, start_date, end_date, interval)
+            resp = self._get_crypto_historical_prices(asset.ticker, start_date, end_date, interval)
             rate = 1 if desired_currency == 'USD' else self.get_exchange_rate('USD', desired_currency)
         else:
-            resp = self._get_security_historical_prices(ticker, start_date, end_date, interval)
+            resp = self._get_security_historical_prices(asset.ticker, start_date, end_date, interval)
             rate = 1 if asset.asset_api_currency == desired_currency else self.get_exchange_rate(asset.asset_api_currency, desired_currency)
         data = json.loads(resp.text)
         datetimes = [datetime.strptime(period['date'], '%Y-%m-%d') for period in data['historical']]

@@ -40,7 +40,7 @@ class DefaultAPI:
     
     def check_interval(self, interval):
         if interval not in self.allowed_historical_intervals:
-            print(f'interval {interval} not accepted be {self.__name__} backend. Using interval=daily')
+            print(f'interval {interval} not accepted be {self.__class__.__name__} backend. Using interval=daily')
             return self.allowed_historical_intervals['daily']
         else:
             return self.allowed_historical_intervals[interval]

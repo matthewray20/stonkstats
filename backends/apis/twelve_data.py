@@ -58,7 +58,7 @@ class MyTwelveDataAPI(DefaultAPI):
         if asset.is_crypto(): data = self._get_crypto_historical_prices(f'{asset.ticker}/{desired_currency}', start_date, end_date, interval)
         else: data = self._get_security_historical_prices(asset.ticker, start_date, end_date, interval)
         # parse datetimes and price data
-        datetimes = [datetime.strptime(period['datetime'], '%y-%m-%d') for period in data]
+        datetimes = [datetime.strptime(period['datetime'], '%Y-%m-%d') for period in data]
         rate = self.which_rate(asset.asset_api_currency, desired_currency)
         prices = [float(period['close']) * rate for period in data]
         return datetimes, prices

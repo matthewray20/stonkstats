@@ -9,9 +9,9 @@ def api_error_handling(func):
     functools.wraps(func)
     def api_error_handling_wrapper(self, *args, **kwargs):
         # avoid rate limits
-        #sleep_time = 60 // self.max_requests_per_min + 1
+        sleep_time = 60 // self.max_requests_per_min + 1
         #print(func.__name__, 'sleeping for:', sleep_time, 'seconds')
-        #time.sleep(sleep_time)
+        time.sleep(sleep_time)
         # call func and general error handling
         try:
             return func(self, *args, **kwargs)
