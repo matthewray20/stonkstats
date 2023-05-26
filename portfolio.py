@@ -195,7 +195,7 @@ class Portfolio:
         data['Total'] = [None, None, total_invested, total_net_value, total_net_profit, total_xmult]
         
         footnote = f'{currency}'
-        self.show_data(data, 'Quickstats', footnote=footnote, max_length=int(total_net_value)+3)
+        self.as_table(data, 'Quickstats', footnote=footnote, max_length=int(total_net_value)+3)
     
     def show_dashboard(self):
         # TODO: GUI
