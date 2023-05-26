@@ -48,6 +48,11 @@ class Portfolio:
             raise ValueError(f'{backend} not recognised as an API backend')
         self.api = api(api_key)
     
+    def setup_from_config(self, config):
+        if 'defaultCurrency' in config.keys(): self.set_default_currency(config['defaultCurrency'])
+        if 'dateFormat' in config.keys(): self.set_data_date_format(config['dateFormat'])
+        if 'backend' in config.keys(): self.set_backend(config['backend'])
+    
     def num_assets(self):
         return len(self.assets)
     
