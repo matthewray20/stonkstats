@@ -99,24 +99,25 @@ class TestPortfolio(unittest.TestCase):
         self.assertEqual(self.portfolio1.date_format, '%d-%m-%Y')
 
     def test_set_backend(self):
+        api_key_file = 'backends/apis/API_keys.yaml'
         self.assertTrue(isinstance(self.portfolio1.api, DummyAPI))
-        self.portfolio1.set_backend('financialModellingPrep')
+        self.portfolio1.set_backend(api_key_file, 'financialModellingPrep')
         self.assertTrue(isinstance(self.portfolio1.api, MyFinancialModellingPrepAPI))
-        self.portfolio1.set_backend('alphaVantage')
+        self.portfolio1.set_backend(api_key_file, 'alphaVantage')
         self.assertTrue(isinstance(self.portfolio1.api, MyAlphaVantageAPI))
-        self.portfolio1.set_backend('twelveData')
+        self.portfolio1.set_backend(api_key_file, 'twelveData')
         self.assertTrue(isinstance(self.portfolio1.api, MyTwelveDataAPI))
     
     def test_setup_from_config(self):
         self.assertEqual(self.portfolio1.default_currency, 'AUD')
         self.assertEqual(self.portfolio1.date_format, None)
         self.assertTrue(isinstance(self.portfolio1.api, DummyAPI))
-        config1 = {'dateFormat': '%Y-%m-%d', 'defaultCurrency': 'USD', 'backend': 'twelveData'}
+        config1 = {'dataConversions': {'dateFormat': '%Y-%m-%d', 'defaultCurrency': 'USD'}, 'api': {'apiBackend': 'twelveData', 'apiKeysFile': 'backends/apis/API_keys.yaml'}}
         self.portfolio1.setup_from_config(config1)
         self.assertEqual(self.portfolio1.default_currency, 'USD')
         self.assertEqual(self.portfolio1.date_format, '%Y-%m-%d')
         self.assertTrue(isinstance(self.portfolio1.api, MyTwelveDataAPI))
-        config2 = {'defaultCurrency': 'AUD', 'backend': 'alphaVantage'}
+        config2 = {'dataConversions': {'defaultCurrency': 'AUD'}, 'api': {'apiBackend': 'alphaVantage', 'apiKeysFile': 'backends/apis/API_keys.yaml'}}
         self.portfolio1.setup_from_config(config2)
         self.assertEqual(self.portfolio1.default_currency, 'AUD')
         self.assertEqual(self.portfolio1.date_format, '%Y-%m-%d')
