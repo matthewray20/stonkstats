@@ -7,15 +7,15 @@
 * The 'eventType' field currently works with 'buy', 'sell', or 'split'
 * The stats generated for each asset held are: total quentity held, average price, total invested, current value and the multiple of your invested total.
 * Stock splits are automatically put at the end of their listed 'date' since they will actualise after market close.
-* New events can be added on top of existing data using the Asset.add_event method
+* Create new assets by using Portfolio.add_new_asset
+* Add events by using Portfolio.add_asset_event
 
 
 ## How to run
-1. Once your stock transaction data is in csv format, set the path to the file in the config file
-1. Set the data headers in the config file. To work out of the box they should be 'assetType', 'price', 'ticker', 'quantity', 'eventType', 'date', 'currency' and 'commision' in any order.
-1. Paste your API key for the specific backend you choose in backends/apis/API_keys.yaml
-1. Choose your default currency and set the format of the dates of your data in the config file
-1. Run main.py
+1. Create a new Portfolio class instance
+1. Set up manually by using the Portfolio methods set_data_date_format, set_backend, and set_default_currency or set up automatically through a config file.
+1. Add data from csv by using add_from_csv or from an existing Portfolio saved as a pickle by using add_from_pickle.
+1. Call Portfolio.quickstats() to view the stats in a pretty table
 
 ## Notes
 <p>This was my first go at taking a simple project of mine and building it out with multiple backend support, error handling and greater robustness.</p>
