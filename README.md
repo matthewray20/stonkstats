@@ -9,6 +9,7 @@
 * Stock splits are automatically put at the end of their listed 'date' since they will actualise after market close.
 * Create new assets by using Portfolio.add_new_asset
 * Add events by using Portfolio.add_asset_event
+* Merge assets or portfolios with the option to allow duplicates or not
 
 
 ## How to run
@@ -22,4 +23,5 @@
 <p>I know the error handling in the APIs is not the best but it was my first time playing with decorators and I wanted to se them somewhere.
 
 ### TODO
-* Add a gui
+* Add GUI
+* Add tax report generation
